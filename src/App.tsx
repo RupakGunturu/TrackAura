@@ -9,7 +9,7 @@ import RealTimePage from "./pages/RealTimePage";
 import FunnelsPage from "./pages/FunnelsPage";
 import RetentionPage from "./pages/RetentionPage";
 import PerformancePage from "./pages/PerformancePage";
-import InsightsPage from "./pages/InsightsPage";
+import HeatmapDashboard from "./components/HeatmapDashboard";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -27,7 +27,7 @@ const App = () => (
             <Route path="/funnels" element={<FunnelsPage />} />
             <Route path="/retention" element={<RetentionPage />} />
             <Route path="/performance" element={<PerformancePage />} />
-            <Route path="/insights" element={<InsightsPage />} />
+            <Route path="/heatmap" element={<HeatmapDashboard />} />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>

@@ -5,7 +5,7 @@ import {
   Filter,
   Users,
   Activity,
-  Lightbulb,
+  Flame,
   ChevronRight,
   Zap,
 } from "lucide-react";
@@ -30,7 +30,7 @@ const navItems = [
   { title: "Funnels", url: "/funnels", icon: Filter },
   { title: "Retention", url: "/retention", icon: Users },
   { title: "Performance", url: "/performance", icon: Activity },
-  { title: "Insights", url: "/insights", icon: Lightbulb },
+  { title: "Heatmap", url: "/heatmap", icon: Flame },
 ];
 
 export function AppSidebar() {
@@ -39,7 +39,10 @@ export function AppSidebar() {
   const collapsed = state === "collapsed";
 
   return (
-    <Sidebar collapsible="icon" className="border-r-0">
+    <Sidebar
+      collapsible="icon"
+      className="border-r-0 bg-white text-sidebar-foreground"
+    >
       {/* Logo */}
       <SidebarHeader className="px-4 py-5 border-b border-sidebar-border">
         <div className="flex items-center gap-2.5 min-w-0">
@@ -49,9 +52,9 @@ export function AppSidebar() {
           {!collapsed && (
             <div className="flex flex-col min-w-0">
               <span className="text-sm font-semibold text-sidebar-accent-foreground tracking-tight truncate">
-                Analytica
+                TrackAura
               </span>
-              <span className="text-xs text-sidebar-foreground/60">Enterprise</span>
+              <span className="text-xs text-sidebar-foreground/60">Analytics</span>
             </div>
           )}
         </div>
