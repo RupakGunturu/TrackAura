@@ -5,9 +5,8 @@ import {
   Filter,
   Users,
   Activity,
-  Lightbulb,
+  MousePointerClick,
   ChevronRight,
-  Zap,
 } from "lucide-react";
 import {
   Sidebar,
@@ -30,7 +29,7 @@ const navItems = [
   { title: "Funnels", url: "/funnels", icon: Filter },
   { title: "Retention", url: "/retention", icon: Users },
   { title: "Performance", url: "/performance", icon: Activity },
-  { title: "Insights", url: "/insights", icon: Lightbulb },
+  { title: "Heatmaps", url: "/heatmaps", icon: MousePointerClick },
 ];
 
 export function AppSidebar() {
@@ -39,19 +38,19 @@ export function AppSidebar() {
   const collapsed = state === "collapsed";
 
   return (
-    <Sidebar collapsible="icon" className="border-r-0">
+    <Sidebar collapsible="icon" className="border-r border-sidebar-border">
       {/* Logo */}
       <SidebarHeader className="px-4 py-5 border-b border-sidebar-border">
         <div className="flex items-center gap-2.5 min-w-0">
           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary">
-            <Zap className="h-4 w-4 text-primary-foreground" />
+            <MousePointerClick className="h-4 w-4 text-primary-foreground" />
           </div>
           {!collapsed && (
             <div className="flex flex-col min-w-0">
-              <span className="text-sm font-semibold text-sidebar-accent-foreground tracking-tight truncate">
-                Analytica
+              <span className="text-sm font-bold text-foreground tracking-tight truncate">
+                TrackAura
               </span>
-              <span className="text-xs text-sidebar-foreground/60">Enterprise</span>
+              <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-widest">Enterprise</span>
             </div>
           )}
         </div>
@@ -60,7 +59,7 @@ export function AppSidebar() {
       <SidebarContent className="py-3">
         <SidebarGroup>
           {!collapsed && (
-            <SidebarGroupLabel className="text-sidebar-foreground/40 text-[10px] uppercase tracking-widest px-3 mb-1">
+            <SidebarGroupLabel className="text-muted-foreground/60 text-[10px] uppercase tracking-widest px-3 mb-1">
               Navigation
             </SidebarGroupLabel>
           )}
@@ -77,15 +76,15 @@ export function AppSidebar() {
                       className={cn(
                         "mx-1 rounded-lg transition-all duration-150",
                         isActive
-                          ? "bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary hover:text-sidebar-primary-foreground"
-                          : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                          ? "bg-accent text-accent-foreground font-medium"
+                          : "text-sidebar-foreground hover:bg-muted hover:text-foreground"
                       )}
                     >
                       <NavLink to={item.url}>
-                        <item.icon className="h-4 w-4 shrink-0" />
+                        <item.icon className={cn("h-4 w-4 shrink-0", isActive && "text-primary")} />
                         <span>{item.title}</span>
                         {isActive && !collapsed && (
-                          <ChevronRight className="ml-auto h-3 w-3 opacity-60" />
+                          <ChevronRight className="ml-auto h-3 w-3 text-primary opacity-60" />
                         )}
                       </NavLink>
                     </SidebarMenuButton>
@@ -99,9 +98,9 @@ export function AppSidebar() {
 
       <SidebarFooter className="border-t border-sidebar-border px-4 py-3">
         {!collapsed ? (
-          <div className="rounded-lg bg-sidebar-accent px-3 py-2.5">
-            <p className="text-xs font-medium text-sidebar-accent-foreground">Pro Plan</p>
-            <p className="text-[11px] text-sidebar-foreground/60 mt-0.5">All features unlocked</p>
+          <div className="rounded-lg bg-accent px-3 py-2.5">
+            <p className="text-xs font-medium text-accent-foreground">Pro Plan</p>
+            <p className="text-[11px] text-muted-foreground mt-0.5">All features unlocked</p>
           </div>
         ) : (
           <div className="flex justify-center">
