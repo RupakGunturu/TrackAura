@@ -114,116 +114,126 @@ export default function RetentionPage() {
             </div>
           </div>
 
-          {/* NEW Cohort heatmap - dot matrix style */}
+          {/* Cohort heatmap - bubble grid */}
           <div className="animate-fade-in-up stagger-4 rounded-2xl border border-border bg-card shadow-card overflow-hidden">
             <div className="px-8 py-6 border-b border-border flex items-center justify-between">
               <div>
                 <h3 className="text-lg font-semibold text-foreground">Cohort Heatmap</h3>
-                <p className="text-sm text-muted-foreground mt-0.5">Click a cohort row for detailed breakdown</p>
+                <p className="text-sm text-muted-foreground mt-0.5">Bubble size and color represent retention strength. Click a row for details.</p>
               </div>
-              {/* Color scale mini */}
-              <div className="hidden md:flex items-center gap-1.5">
-                <span className="text-[10px] text-muted-foreground mr-1">Low</span>
-                {[88, 75, 62, 50, 40, 35].map((l, i) => (
-                  <div key={i} className="h-4 w-6 rounded-sm" style={{ background: `hsl(158, ${35 + i * 6}%, ${l}%)` }} />
+              <div className="hidden md:flex items-center gap-2">
+                <span className="text-[10px] text-muted-foreground">Weak</span>
+                {[12, 16, 20, 24, 28, 32].map((size, i) => (
+                  <div
+                    key={i}
+                    className="rounded-full"
+                    style={{
+                      width: size,
+                      height: size,
+                      background: `hsl(158, ${40 + i * 5}%, ${65 - i * 7}%)`,
+                    }}
+                  />
                 ))}
-                <span className="text-[10px] text-muted-foreground ml-1">High</span>
+                <span className="text-[10px] text-muted-foreground">Strong</span>
               </div>
             </div>
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[700px]">
-                <thead>
-                  <tr>
-                    <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider bg-muted/20 border-b border-border sticky left-0 bg-card z-10">
-                      Cohort
-                    </th>
-                    <th className="text-center px-3 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider bg-muted/20 border-b border-border">
-                      Users
-                    </th>
-                    {cohortColumns.map((col) => (
-                      <th key={col} className="text-center px-2 py-4 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider bg-muted/20 border-b border-border">
-                        {col}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {cohortData.map((row, ri) => {
-                    const isSelected = selectedCohort === ri;
-                    return (
-                      <tr
-                        key={row.cohort}
-                        onClick={() => setSelectedCohort(isSelected ? null : ri)}
-                        className={cn(
-                          "cursor-pointer transition-colors border-b border-border last:border-0",
-                          isSelected ? "bg-accent/40" : "hover:bg-muted/20"
-                        )}
-                      >
-                        <td className="px-6 py-3 text-sm font-medium text-foreground whitespace-nowrap sticky left-0 bg-card z-10 border-r border-border">
-                          <div className="flex items-center gap-2">
-                            <div className={cn("h-2 w-2 rounded-full", isSelected ? "bg-primary" : "bg-muted-foreground/30")} />
-                            {row.cohort}
-                          </div>
-                        </td>
-                        <td className="px-3 py-3 text-center text-xs font-mono text-muted-foreground font-semibold">
-                          {row.users.toLocaleString()}
-                        </td>
-                        {row.retention.map((val, ci) => {
-                          const isNull = val === null;
-                          const isHovered = hoveredCell?.row === ri && hoveredCell?.col === ci;
-                          return (
-                            <td key={ci} className="px-2 py-3 text-center">
-                              {isNull ? (
-                                <div className="mx-auto w-12 h-10 rounded-lg bg-muted/30 flex items-center justify-center">
-                                  <span className="text-[10px] text-muted-foreground/40">—</span>
-                                </div>
-                              ) : (
-                                <div
-                                  className={cn(
-                                    "mx-auto w-12 h-10 rounded-lg flex items-center justify-center text-xs font-bold relative transition-all duration-200",
-                                    isHovered && "scale-125 shadow-lg z-20 ring-2 ring-primary/40"
-                                  )}
-                                  style={{
-                                    background: getColor(val),
-                                    opacity: isHovered ? 1 : getOpacity(val),
-                                    color: (val as number) >= 50 ? "white" : "hsl(var(--foreground))"
-                                  }}
-                                  onMouseEnter={() => setHoveredCell({ row: ri, col: ci })}
-                                  onMouseLeave={() => setHoveredCell(null)}
-                                >
-                                  {val}%
-                                  {/* Tooltip on hover */}
-                                  {isHovered && (
-                                    <div className="absolute -top-16 left-1/2 -translate-x-1/2 bg-card border border-border rounded-xl px-3 py-2 shadow-elevated whitespace-nowrap z-50 pointer-events-none">
-                                      <div className="text-[10px] text-muted-foreground">{row.cohort} · {cohortColumns[ci]}</div>
-                                      <div className="text-xs font-bold text-foreground">{val}% · {Math.round(row.users * (val as number) / 100).toLocaleString()} users</div>
-                                      <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 rotate-45 h-2 w-2 bg-card border-r border-b border-border" />
-                                    </div>
-                                  )}
+            <div className="overflow-x-auto p-6">
+              {/* Header row */}
+              <div className="flex items-center mb-2 pl-[140px]">
+                <div className="w-[72px] shrink-0 text-center text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Users</div>
+                {cohortColumns.map((col) => (
+                  <div key={col} className="w-[64px] shrink-0 text-center text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">{col}</div>
+                ))}
+              </div>
+
+              {/* Data rows */}
+              {cohortData.map((row, ri) => {
+                const isSelected = selectedCohort === ri;
+                return (
+                  <div
+                    key={row.cohort}
+                    onClick={() => setSelectedCohort(isSelected ? null : ri)}
+                    className={cn(
+                      "flex items-center py-2 px-2 rounded-xl cursor-pointer transition-all duration-200",
+                      isSelected ? "bg-accent/50 shadow-sm" : "hover:bg-muted/30"
+                    )}
+                  >
+                    {/* Cohort label */}
+                    <div className="w-[140px] shrink-0 flex items-center gap-2">
+                      <div className={cn(
+                        "h-2.5 w-2.5 rounded-full transition-colors",
+                        isSelected ? "bg-primary" : "bg-muted-foreground/20"
+                      )} />
+                      <span className="text-sm font-medium text-foreground truncate">{row.cohort}</span>
+                    </div>
+
+                    {/* Users count */}
+                    <div className="w-[72px] shrink-0 text-center text-xs font-mono text-muted-foreground font-semibold">
+                      {row.users.toLocaleString()}
+                    </div>
+
+                    {/* Retention bubbles */}
+                    {row.retention.map((val, ci) => {
+                      const isNull = val === null;
+                      const isHovered = hoveredCell?.row === ri && hoveredCell?.col === ci;
+                      const bubbleSize = isNull ? 0 : 14 + ((val as number) / 100) * 26;
+
+                      return (
+                        <div key={ci} className="w-[64px] shrink-0 flex items-center justify-center h-[48px] relative">
+                          {isNull ? (
+                            <div className="h-3 w-3 rounded-full border-2 border-dashed border-muted-foreground/15" />
+                          ) : (
+                            <div
+                              className={cn(
+                                "rounded-full flex items-center justify-center transition-all duration-300 cursor-pointer relative",
+                                isHovered && "ring-3 ring-primary/30 scale-110 shadow-lg"
+                              )}
+                              style={{
+                                width: bubbleSize,
+                                height: bubbleSize,
+                                background: `radial-gradient(circle at 35% 35%, hsl(158, ${40 + (val as number) * 0.3}%, ${70 - (val as number) * 0.35}%), hsl(158, ${50 + (val as number) * 0.2}%, ${55 - (val as number) * 0.3}%))`,
+                                boxShadow: isHovered ? `0 4px 20px hsl(158, 50%, 40% / 0.3)` : `0 1px 4px hsl(158, 50%, 40% / 0.1)`,
+                              }}
+                              onMouseEnter={(e) => { e.stopPropagation(); setHoveredCell({ row: ri, col: ci }); }}
+                              onMouseLeave={() => setHoveredCell(null)}
+                            >
+                              <span className={cn(
+                                "text-[9px] font-bold transition-opacity",
+                                (val as number) >= 40 ? "text-white" : "text-foreground",
+                                bubbleSize < 24 ? "opacity-0" : "opacity-100"
+                              )}>
+                                {val}
+                              </span>
+
+                              {/* Tooltip */}
+                              {isHovered && (
+                                <div className="absolute -top-[52px] left-1/2 -translate-x-1/2 bg-foreground text-background rounded-lg px-3 py-2 shadow-elevated whitespace-nowrap z-50 pointer-events-none">
+                                  <div className="text-[10px] opacity-70">{row.cohort} · {cohortColumns[ci]}</div>
+                                  <div className="text-xs font-bold">{val}% · {Math.round(row.users * (val as number) / 100).toLocaleString()} users</div>
+                                  <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 rotate-45 h-2 w-2 bg-foreground" />
                                 </div>
                               )}
-                            </td>
-                          );
-                        })}
-                      </tr>
-                    );
-                  })}
-                  {/* Average row */}
-                  <tr className="bg-muted/30 border-t-2 border-border">
-                    <td className="px-6 py-3 text-sm font-bold text-foreground sticky left-0 bg-muted/30 z-10 border-r border-border">
-                      Average
-                    </td>
-                    <td className="px-3 py-3 text-center text-xs font-mono text-muted-foreground">—</td>
-                    {columnAvgs.map((avg, ci) => (
-                      <td key={ci} className="px-2 py-3 text-center">
-                        <div className="mx-auto w-12 h-10 rounded-lg flex items-center justify-center text-xs font-bold bg-primary/15 text-primary">
-                          {avg}%
+                            </div>
+                          )}
                         </div>
-                      </td>
-                    ))}
-                  </tr>
-                </tbody>
-              </table>
+                      );
+                    })}
+                  </div>
+                );
+              })}
+
+              {/* Average row */}
+              <div className="flex items-center py-3 px-2 mt-2 rounded-xl bg-muted/40 border-t-2 border-border">
+                <div className="w-[140px] shrink-0 text-sm font-bold text-foreground">Average</div>
+                <div className="w-[72px] shrink-0 text-center text-xs text-muted-foreground">—</div>
+                {columnAvgs.map((avg, ci) => (
+                  <div key={ci} className="w-[64px] shrink-0 flex items-center justify-center h-[48px]">
+                    <div className="h-10 w-10 rounded-full bg-primary/15 border-2 border-primary/30 flex items-center justify-center">
+                      <span className="text-[10px] font-bold text-primary">{avg}%</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
 

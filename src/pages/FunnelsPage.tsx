@@ -68,20 +68,20 @@ export default function FunnelsPage() {
                   const isSelected = selectedStage === i;
 
                   return (
-                    <div key={stage.name} className="flex items-stretch">
+                    <div key={stage.name} className="flex items-stretch pt-4">
                       {/* Stage card */}
                       <button
                         onClick={() => setSelectedStage(isSelected ? null : i)}
                         className={cn(
-                          "relative flex flex-col items-center justify-between p-5 rounded-2xl border-2 transition-all duration-300 min-w-[160px] text-left group",
+                          "relative flex flex-col items-center justify-between p-5 rounded-2xl border-2 transition-all duration-300 min-w-[160px] text-left group overflow-visible",
                           isSelected
                             ? "border-primary bg-accent shadow-elevated scale-[1.03]"
                             : "border-border bg-card hover:border-primary/30 hover:shadow-card"
                         )}
                       >
-                        {/* Stage number badge */}
+                        {/* Stage number badge - positioned outside card */}
                         <div className={cn(
-                          "absolute -top-3 left-4 h-6 w-6 rounded-full flex items-center justify-center text-[10px] font-bold",
+                          "absolute -top-3.5 left-1/2 -translate-x-1/2 h-7 w-7 rounded-full flex items-center justify-center text-[11px] font-bold shadow-sm border-2 border-card z-10",
                           isSelected ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
                         )}>
                           {i + 1}
