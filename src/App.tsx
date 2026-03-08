@@ -9,6 +9,11 @@ import RealTimePage from "./pages/RealTimePage";
 import FunnelsPage from "./pages/FunnelsPage";
 import RetentionPage from "./pages/RetentionPage";
 import PerformancePage from "./pages/PerformancePage";
+import HeatmapsPage from "./pages/HeatmapsPage";
+import SessionReplayPage from "./pages/SessionReplayPage";
+import AccountSettingsPage from "./pages/AccountSettingsPage";
+import TeamManagementPage from "./pages/TeamManagementPage";
+import LandingPage from "./pages/LandingPage";
 import HeatmapDashboard from "./components/HeatmapDashboard";
 import NotFound from "./pages/NotFound";
 
@@ -21,7 +26,17 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <Routes>
+          <Route path="/" element={<LandingPage />} />
           <Route element={<DashboardLayout />}>
+            <Route path="/dashboard" element={<OverviewPage />} />
+            <Route path="/dashboard/realtime" element={<RealTimePage />} />
+            <Route path="/dashboard/funnels" element={<FunnelsPage />} />
+            <Route path="/dashboard/retention" element={<RetentionPage />} />
+            <Route path="/dashboard/performance" element={<PerformancePage />} />
+            <Route path="/dashboard/heatmaps" element={<HeatmapsPage />} />
+            <Route path="/dashboard/sessions" element={<SessionReplayPage />} />
+            <Route path="/dashboard/settings" element={<AccountSettingsPage />} />
+            <Route path="/dashboard/team" element={<TeamManagementPage />} />
             <Route path="/" element={<OverviewPage />} />
             <Route path="/realtime" element={<RealTimePage />} />
             <Route path="/funnels" element={<FunnelsPage />} />
