@@ -8,6 +8,9 @@ import {
   MousePointerClick,
   Play,
   ChevronRight,
+  Settings,
+  LogOut,
+  ChevronsUpDown,
 } from "lucide-react";
 import {
   Sidebar,
@@ -22,6 +25,13 @@ import {
   SidebarFooter,
   useSidebar,
 } from "@/components/ui/sidebar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 
 const navItems = [
@@ -44,7 +54,7 @@ export function AppSidebar() {
       {/* Logo */}
       <SidebarHeader className="px-4 py-5 border-b border-sidebar-border">
         <div className="flex items-center gap-2.5 min-w-0">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary shadow-sm">
             <MousePointerClick className="h-4 w-4 text-primary-foreground" />
           </div>
           {!collapsed && (
@@ -62,7 +72,7 @@ export function AppSidebar() {
         <SidebarGroup>
           {!collapsed && (
             <SidebarGroupLabel className="text-muted-foreground/60 text-[10px] uppercase tracking-widest px-3 mb-1">
-              Navigation
+              Analytics
             </SidebarGroupLabel>
           )}
           <SidebarGroupContent>
@@ -98,17 +108,49 @@ export function AppSidebar() {
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter className="border-t border-sidebar-border px-4 py-3">
-        {!collapsed ? (
-          <div className="rounded-lg bg-accent px-3 py-2.5">
-            <p className="text-xs font-medium text-accent-foreground">Pro Plan</p>
-            <p className="text-[11px] text-muted-foreground mt-0.5">All features unlocked</p>
-          </div>
-        ) : (
-          <div className="flex justify-center">
-            <div className="h-2 w-2 rounded-full bg-primary animate-pulse-dot" />
-          </div>
-        )}
+      {/* Profile section in footer */}
+      <SidebarFooter className="border-t border-sidebar-border p-2">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button className={cn(
+              "flex items-center gap-3 w-full rounded-xl px-3 py-2.5 hover:bg-muted transition-colors text-left",
+              collapsed && "justify-center px-0"
+            )}>
+              <div className="h-8 w-8 rounded-full bg-gradient-to-br from-primary to-primary-glow flex items-center justify-center shrink-0 shadow-sm">
+                <span className="text-xs font-bold text-primary-foreground">JD</span>
+              </div>
+              {!collapsed && (
+                <>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-semibold text-foreground truncate">John Doe</div>
+                    <div className="text-[11px] text-muted-foreground truncate">john@trackaura.com</div>
+                  </div>
+                  <ChevronsUpDown className="h-4 w-4 text-muted-foreground shrink-0" />
+                </>
+              )}
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" side="top" className="w-56">
+            <div className="px-3 py-2.5">
+              <div className="text-sm font-semibold text-foreground">John Doe</div>
+              <div className="text-xs text-muted-foreground">john@trackaura.com</div>
+            </div>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem className="gap-2">
+              <Settings className="h-4 w-4" />
+              Account Settings
+            </DropdownMenuItem>
+            <DropdownMenuItem className="gap-2">
+              <Users className="h-4 w-4" />
+              Team Management
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem className="gap-2 text-destructive focus:text-destructive">
+              <LogOut className="h-4 w-4" />
+              Sign Out
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </SidebarFooter>
     </Sidebar>
   );
