@@ -12,7 +12,7 @@ export function DashboardLayout() {
           <header className="flex h-12 shrink-0 items-center gap-2 border-b border-border bg-background/80 backdrop-blur px-4 sticky top-0 z-20">
             <SidebarTrigger className="h-7 w-7 text-muted-foreground hover:text-foreground" />
             <div className="h-4 w-px bg-border mx-1" />
-            <span className="text-xs text-muted-foreground font-medium">Analytica Enterprise</span>
+            <span className="text-xs text-muted-foreground font-medium">TrackAura Enterprise</span>
             <div className="ml-auto flex items-center gap-2">
               <div className="h-2 w-2 rounded-full bg-primary animate-pulse-dot" />
               <span className="text-xs text-muted-foreground">Live</span>
