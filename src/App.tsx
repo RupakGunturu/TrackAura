@@ -13,6 +13,7 @@ import HeatmapsPage from "./pages/HeatmapsPage";
 import SessionReplayPage from "./pages/SessionReplayPage";
 import AccountSettingsPage from "./pages/AccountSettingsPage";
 import TeamManagementPage from "./pages/TeamManagementPage";
+import LandingPage from "./pages/LandingPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -24,6 +25,7 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <Routes>
+          <Route path="/landing" element={<LandingPage />} />
           <Route element={<DashboardLayout />}>
             <Route path="/" element={<OverviewPage />} />
             <Route path="/realtime" element={<RealTimePage />} />
