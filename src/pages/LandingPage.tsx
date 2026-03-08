@@ -533,7 +533,7 @@ export default function LandingPage() {
               Add TrackAura in under 2 minutes. No credit card. No complex setup. Just insights.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-              <Link to="/"
+              <Link to="/dashboard"
                 className="inline-flex items-center gap-2 px-8 py-3.5 rounded-2xl bg-white text-primary text-base font-semibold hover:bg-white/90 transition-colors shadow-lg">
                 Open Dashboard <ArrowRight className="h-4 w-4" />
               </Link>
