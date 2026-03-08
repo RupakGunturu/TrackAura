@@ -137,13 +137,13 @@ export function AppSidebar() {
             </div>
             <DropdownMenuSeparator />
             <DropdownMenuItem className="gap-2" asChild>
-              <a href="/settings">
+              <a href="/dashboard/settings">
                 <Settings className="h-4 w-4" />
                 Account Settings
               </a>
             </DropdownMenuItem>
             <DropdownMenuItem className="gap-2" asChild>
-              <a href="/team">
+              <a href="/dashboard/team">
                 <Users className="h-4 w-4" />
                 Team Management
               </a>
