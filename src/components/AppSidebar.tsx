@@ -6,6 +6,7 @@ import {
   Users,
   Activity,
   MousePointerClick,
+  Play,
   ChevronRight,
 } from "lucide-react";
 import {
@@ -30,6 +31,7 @@ const navItems = [
   { title: "Retention", url: "/retention", icon: Users },
   { title: "Performance", url: "/performance", icon: Activity },
   { title: "Heatmaps", url: "/heatmaps", icon: MousePointerClick },
+  { title: "Sessions", url: "/sessions", icon: Play },
 ];
 
 export function AppSidebar() {
