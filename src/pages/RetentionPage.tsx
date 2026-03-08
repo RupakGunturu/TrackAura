@@ -1,43 +1,40 @@
 import { useState, useEffect } from "react";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import { FilterBar } from "@/components/FilterBar";
 import { SkeletonCard } from "@/components/SkeletonCard";
 import { cohortData, cohortColumns } from "@/lib/mockData";
 import { cn } from "@/lib/utils";
-import { TrendingUp, TrendingDown, Users, CalendarDays } from "lucide-react";
+import { TrendingUp, TrendingDown, Users, CalendarDays, Layers } from "lucide-react";
 
 function getColor(value: number | null): string {
-  if (value === null) return "hsl(var(--muted))";
-  if (value >= 90) return "hsl(158, 64%, 25%)";
-  if (value >= 70) return "hsl(158, 60%, 33%)";
-  if (value >= 50) return "hsl(158, 56%, 42%)";
-  if (value >= 35) return "hsl(158, 50%, 55%)";
-  if (value >= 20) return "hsl(158, 46%, 68%)";
-  return "hsl(158, 42%, 82%)";
+  if (value === null) return "transparent";
+  if (value >= 90) return "hsl(var(--primary))";
+  if (value >= 70) return "hsl(158, 60%, 40%)";
+  if (value >= 50) return "hsl(158, 50%, 50%)";
+  if (value >= 35) return "hsl(158, 45%, 62%)";
+  if (value >= 20) return "hsl(158, 40%, 75%)";
+  return "hsl(158, 35%, 88%)";
 }
 
-function getTextColor(value: number | null): string {
-  if (value === null) return "hsl(var(--muted-foreground))";
-  if (value >= 50) return "hsl(0,0%,100%)";
-  return "hsl(158, 64%, 20%)";
+function getOpacity(value: number | null): number {
+  if (value === null) return 0;
+  return 0.15 + (value / 100) * 0.85;
 }
-
-// Bar chart data for retention comparison
-const retentionBarData = cohortColumns.map((col, ci) => {
-  const values = cohortData.map((r) => r.retention[ci]).filter((v) => v !== null) as number[];
-  const avg = values.length > 0 ? Math.round(values.reduce((a, b) => a + b, 0) / values.length) : 0;
-  return { name: col, avg };
-});
 
 export default function RetentionPage() {
   const [loading, setLoading] = useState(true);
-  const [tooltip, setTooltip] = useState<{ cohort: string; column: string; value: number; users: number } | null>(null);
-  const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 });
+  const [hoveredCell, setHoveredCell] = useState<{ row: number; col: number } | null>(null);
+  const [selectedCohort, setSelectedCohort] = useState<number | null>(null);
 
   useEffect(() => {
     const t = setTimeout(() => setLoading(false), 700);
     return () => clearTimeout(t);
   }, []);
+
+  // Compute averages per column
+  const columnAvgs = cohortColumns.map((_, ci) => {
+    const vals = cohortData.map((r) => r.retention[ci]).filter((v) => v !== null) as number[];
+    return vals.length > 0 ? Math.round(vals.reduce((a, b) => a + b, 0) / vals.length) : 0;
+  });
 
   return (
     <div className="space-y-6">
@@ -84,126 +81,183 @@ export default function RetentionPage() {
             ))}
           </div>
 
-          {/* Retention bar chart + legend */}
-          <div className="grid lg:grid-cols-3 gap-4">
-            {/* Bar chart */}
-            <div className="lg:col-span-2 animate-fade-in-up stagger-3 rounded-2xl border border-border bg-card p-6 shadow-card">
-              <h3 className="text-base font-semibold text-foreground mb-1">Average Retention by Period</h3>
-              <p className="text-xs text-muted-foreground mb-5">Mean retention across all cohorts</p>
-              <ResponsiveContainer width="100%" height={220}>
-                <BarChart data={retentionBarData} margin={{ top: 4, right: 4, left: -10, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
-                  <XAxis dataKey="name" tick={{ fontSize: 11, fill: "hsl(var(--foreground))", fontWeight: 500 }} tickLine={false} axisLine={false} />
-                  <YAxis tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} tickLine={false} axisLine={false} domain={[0, 100]} tickFormatter={(v) => `${v}%`} />
-                  <Tooltip
-                    contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 12, fontSize: 12, boxShadow: "0 8px 30px rgba(0,0,0,0.08)" }}
-                    formatter={(v: number) => [`${v}%`, "Avg Retention"]}
-                    cursor={{ fill: "hsl(var(--primary) / 0.05)" }}
-                  />
-                  <Bar dataKey="avg" radius={[8, 8, 0, 0]} barSize={48}>
-                    {retentionBarData.map((entry, index) => (
-                      <Cell key={index} fill={`hsl(158, ${64 - index * 8}%, ${35 + index * 6}%)`} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
+          {/* Retention curve - average line */}
+          <div className="animate-fade-in-up stagger-3 rounded-2xl border border-border bg-card shadow-card overflow-hidden">
+            <div className="px-8 py-6 border-b border-border flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-semibold text-foreground">Average Retention Curve</h3>
+                <p className="text-sm text-muted-foreground mt-0.5">Mean retention across all cohorts per period</p>
+              </div>
+              <div className="h-10 w-10 rounded-xl bg-accent flex items-center justify-center">
+                <Layers className="h-4.5 w-4.5 text-primary" />
+              </div>
             </div>
-
-            {/* Legend */}
-            <div className="animate-fade-in-up stagger-3 rounded-2xl border border-border bg-card p-5 shadow-card">
-              <h3 className="text-sm font-semibold text-foreground mb-4">Color Scale</h3>
-              <div className="space-y-2.5">
-                {[
-                  { label: "90%+", bg: "hsl(158, 64%, 25%)", text: "hsl(0,0%,100%)" },
-                  { label: "70-89%", bg: "hsl(158, 60%, 33%)", text: "hsl(0,0%,100%)" },
-                  { label: "50-69%", bg: "hsl(158, 56%, 42%)", text: "hsl(0,0%,100%)" },
-                  { label: "35-49%", bg: "hsl(158, 50%, 55%)", text: "hsl(158, 64%, 15%)" },
-                  { label: "20-34%", bg: "hsl(158, 46%, 68%)", text: "hsl(158, 64%, 15%)" },
-                  { label: "<20%", bg: "hsl(158, 42%, 82%)", text: "hsl(158, 64%, 20%)" },
-                ].map((l) => (
-                  <div key={l.label} className="flex items-center gap-3">
-                    <div className="h-6 w-12 rounded-md" style={{ background: l.bg }} />
-                    <span className="text-xs text-muted-foreground font-medium">{l.label}</span>
+            <div className="p-8">
+              <div className="flex items-end gap-3 h-[180px]">
+                {columnAvgs.map((avg, i) => (
+                  <div key={i} className="flex-1 flex flex-col items-center gap-2">
+                    <span className="text-xs font-bold text-foreground">{avg}%</span>
+                    <div className="w-full relative rounded-t-lg overflow-hidden" style={{ height: `${avg * 1.6}px` }}>
+                      <div
+                        className="absolute inset-0 rounded-t-lg transition-all duration-500"
+                        style={{
+                          background: `linear-gradient(to top, hsl(var(--primary)), hsl(158, 50%, ${50 + i * 5}%))`,
+                          opacity: 0.85
+                        }}
+                      />
+                      <div className="absolute inset-0 rounded-t-lg bg-gradient-to-t from-transparent to-white/10" />
+                    </div>
+                    <span className="text-[10px] text-muted-foreground font-medium">{cohortColumns[i]}</span>
                   </div>
                 ))}
-              </div>
-
-              <div className="mt-5 pt-4 border-t border-border">
-                <div className="text-xs text-muted-foreground mb-2">Best Cohort</div>
-                <div className="text-sm font-bold text-foreground">Week 5 (Feb 3)</div>
-                <div className="text-xs text-primary font-semibold mt-0.5">47% Day-30 retention</div>
               </div>
             </div>
           </div>
 
-          {/* Cohort heatmap table */}
+          {/* NEW Cohort heatmap - dot matrix style */}
           <div className="animate-fade-in-up stagger-4 rounded-2xl border border-border bg-card shadow-card overflow-hidden">
-            <div className="px-6 py-5 border-b border-border">
-              <h3 className="text-base font-semibold text-foreground">Cohort Heatmap</h3>
-              <p className="text-xs text-muted-foreground mt-0.5">Weekly cohort retention breakdown</p>
+            <div className="px-8 py-6 border-b border-border flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-semibold text-foreground">Cohort Heatmap</h3>
+                <p className="text-sm text-muted-foreground mt-0.5">Click a cohort row for detailed breakdown</p>
+              </div>
+              {/* Color scale mini */}
+              <div className="hidden md:flex items-center gap-1.5">
+                <span className="text-[10px] text-muted-foreground mr-1">Low</span>
+                {[88, 75, 62, 50, 40, 35].map((l, i) => (
+                  <div key={i} className="h-4 w-6 rounded-sm" style={{ background: `hsl(158, ${35 + i * 6}%, ${l}%)` }} />
+                ))}
+                <span className="text-[10px] text-muted-foreground ml-1">High</span>
+              </div>
             </div>
             <div className="overflow-x-auto">
-              <table className="w-full text-sm min-w-[600px]">
+              <table className="w-full min-w-[700px]">
                 <thead>
-                  <tr className="bg-muted/30">
-                    <th className="text-left px-6 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider border-b border-border">Cohort</th>
-                    <th className="text-center px-4 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider border-b border-border">Users</th>
+                  <tr>
+                    <th className="text-left px-6 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider bg-muted/20 border-b border-border sticky left-0 bg-card z-10">
+                      Cohort
+                    </th>
+                    <th className="text-center px-3 py-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider bg-muted/20 border-b border-border">
+                      Users
+                    </th>
                     {cohortColumns.map((col) => (
-                      <th key={col} className="text-center px-4 py-3.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider border-b border-border">{col}</th>
+                      <th key={col} className="text-center px-2 py-4 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider bg-muted/20 border-b border-border">
+                        {col}
+                      </th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
-                  {cohortData.map((row) => (
-                    <tr key={row.cohort} className="border-b border-border last:border-0 hover:bg-muted/10 transition-colors">
-                      <td className="px-6 py-3.5 text-sm font-medium text-foreground whitespace-nowrap">{row.cohort}</td>
-                      <td className="px-4 py-3.5 text-center text-sm font-mono text-muted-foreground font-semibold">{row.users.toLocaleString()}</td>
-                      {row.retention.map((val, ci) => {
-                        const isNull = val === null;
-                        return (
-                          <td key={ci} className="px-4 py-3.5 text-center">
-                            <div
-                              className={cn(
-                                "mx-auto w-16 h-11 rounded-lg flex items-center justify-center text-xs font-bold transition-all duration-200",
-                                !isNull && "cursor-pointer hover:scale-110 hover:shadow-lg hover:ring-2 hover:ring-primary/30"
+                  {cohortData.map((row, ri) => {
+                    const isSelected = selectedCohort === ri;
+                    return (
+                      <tr
+                        key={row.cohort}
+                        onClick={() => setSelectedCohort(isSelected ? null : ri)}
+                        className={cn(
+                          "cursor-pointer transition-colors border-b border-border last:border-0",
+                          isSelected ? "bg-accent/40" : "hover:bg-muted/20"
+                        )}
+                      >
+                        <td className="px-6 py-3 text-sm font-medium text-foreground whitespace-nowrap sticky left-0 bg-card z-10 border-r border-border">
+                          <div className="flex items-center gap-2">
+                            <div className={cn("h-2 w-2 rounded-full", isSelected ? "bg-primary" : "bg-muted-foreground/30")} />
+                            {row.cohort}
+                          </div>
+                        </td>
+                        <td className="px-3 py-3 text-center text-xs font-mono text-muted-foreground font-semibold">
+                          {row.users.toLocaleString()}
+                        </td>
+                        {row.retention.map((val, ci) => {
+                          const isNull = val === null;
+                          const isHovered = hoveredCell?.row === ri && hoveredCell?.col === ci;
+                          return (
+                            <td key={ci} className="px-2 py-3 text-center">
+                              {isNull ? (
+                                <div className="mx-auto w-12 h-10 rounded-lg bg-muted/30 flex items-center justify-center">
+                                  <span className="text-[10px] text-muted-foreground/40">—</span>
+                                </div>
+                              ) : (
+                                <div
+                                  className={cn(
+                                    "mx-auto w-12 h-10 rounded-lg flex items-center justify-center text-xs font-bold relative transition-all duration-200",
+                                    isHovered && "scale-125 shadow-lg z-20 ring-2 ring-primary/40"
+                                  )}
+                                  style={{
+                                    background: getColor(val),
+                                    opacity: isHovered ? 1 : getOpacity(val),
+                                    color: (val as number) >= 50 ? "white" : "hsl(var(--foreground))"
+                                  }}
+                                  onMouseEnter={() => setHoveredCell({ row: ri, col: ci })}
+                                  onMouseLeave={() => setHoveredCell(null)}
+                                >
+                                  {val}%
+                                  {/* Tooltip on hover */}
+                                  {isHovered && (
+                                    <div className="absolute -top-16 left-1/2 -translate-x-1/2 bg-card border border-border rounded-xl px-3 py-2 shadow-elevated whitespace-nowrap z-50 pointer-events-none">
+                                      <div className="text-[10px] text-muted-foreground">{row.cohort} · {cohortColumns[ci]}</div>
+                                      <div className="text-xs font-bold text-foreground">{val}% · {Math.round(row.users * (val as number) / 100).toLocaleString()} users</div>
+                                      <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 rotate-45 h-2 w-2 bg-card border-r border-b border-border" />
+                                    </div>
+                                  )}
+                                </div>
                               )}
-                              style={{ background: getColor(val), color: getTextColor(val) }}
-                              onMouseEnter={(e) => {
-                                if (!isNull) {
-                                  setTooltip({ cohort: row.cohort, column: cohortColumns[ci], value: val as number, users: Math.round(row.users * (val as number) / 100) });
-                                  const rect = (e.target as HTMLElement).getBoundingClientRect();
-                                  setTooltipPos({ x: rect.left, y: rect.top });
-                                }
-                              }}
-                              onMouseLeave={() => setTooltip(null)}
-                            >
-                              {isNull ? "—" : `${val}%`}
-                            </div>
-                          </td>
-                        );
-                      })}
-                    </tr>
-                  ))}
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    );
+                  })}
+                  {/* Average row */}
+                  <tr className="bg-muted/30 border-t-2 border-border">
+                    <td className="px-6 py-3 text-sm font-bold text-foreground sticky left-0 bg-muted/30 z-10 border-r border-border">
+                      Average
+                    </td>
+                    <td className="px-3 py-3 text-center text-xs font-mono text-muted-foreground">—</td>
+                    {columnAvgs.map((avg, ci) => (
+                      <td key={ci} className="px-2 py-3 text-center">
+                        <div className="mx-auto w-12 h-10 rounded-lg flex items-center justify-center text-xs font-bold bg-primary/15 text-primary">
+                          {avg}%
+                        </div>
+                      </td>
+                    ))}
+                  </tr>
                 </tbody>
               </table>
             </div>
           </div>
-        </>
-      )}
 
-      {/* Floating tooltip */}
-      {tooltip && (
-        <div
-          className="fixed z-50 pointer-events-none rounded-xl border border-border bg-card shadow-elevated px-4 py-3 text-xs"
-          style={{ top: tooltipPos.y - 90, left: tooltipPos.x - 60 }}
-        >
-          <div className="font-semibold text-foreground text-sm">{tooltip.cohort}</div>
-          <div className="text-muted-foreground">{tooltip.column}</div>
-          <div className="flex gap-4 mt-1.5">
-            <span>Retention: <strong className="text-primary">{tooltip.value}%</strong></span>
-            <span>Users: <strong className="text-foreground">{tooltip.users.toLocaleString()}</strong></span>
-          </div>
-        </div>
+          {/* Selected cohort breakdown */}
+          {selectedCohort !== null && (
+            <div className="animate-fade-in-up rounded-2xl border border-primary/20 bg-accent/30 p-6 shadow-card">
+              <h4 className="text-base font-semibold text-foreground mb-1">
+                {cohortData[selectedCohort].cohort} — {cohortData[selectedCohort].users.toLocaleString()} users
+              </h4>
+              <p className="text-xs text-muted-foreground mb-4">Retention breakdown for this cohort</p>
+              <div className="flex gap-3 overflow-x-auto pb-2">
+                {cohortData[selectedCohort].retention.map((val, ci) => {
+                  if (val === null) return null;
+                  return (
+                    <div key={ci} className="flex flex-col items-center gap-2 min-w-[80px]">
+                      <div className="text-xs font-semibold text-muted-foreground">{cohortColumns[ci]}</div>
+                      <div className="relative w-16 h-24 rounded-xl bg-muted overflow-hidden">
+                        <div
+                          className="absolute bottom-0 w-full rounded-t-lg transition-all duration-700"
+                          style={{
+                            height: `${val}%`,
+                            background: `linear-gradient(to top, hsl(var(--primary)), hsl(158, 50%, 55%))`,
+                          }}
+                        />
+                      </div>
+                      <div className="text-xs font-bold text-foreground">{val}%</div>
+                      <div className="text-[10px] text-muted-foreground">{Math.round(cohortData[selectedCohort].users * val / 100).toLocaleString()}</div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

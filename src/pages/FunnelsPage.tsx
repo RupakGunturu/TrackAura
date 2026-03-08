@@ -3,19 +3,13 @@ import { FilterBar } from "@/components/FilterBar";
 import { SkeletonCard } from "@/components/SkeletonCard";
 import { funnelStages } from "@/lib/mockData";
 import { cn } from "@/lib/utils";
-import { ArrowUpRight, ArrowDown, TrendingDown } from "lucide-react";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
+import { ArrowUpRight, TrendingDown, ArrowRight, Zap, Target, Eye, MousePointerClick } from "lucide-react";
 
-// Funnel bar chart data
-const funnelBarData = funnelStages.map((s, i) => ({
-  name: s.name,
-  value: s.value,
-  fill: `hsl(158, ${64 - i * 6}%, ${35 + i * 5}%)`,
-}));
+const stageIcons = [Eye, MousePointerClick, Zap, Target, ArrowUpRight];
 
 export default function FunnelsPage() {
   const [loading, setLoading] = useState(true);
-  const [hovered, setHovered] = useState<number | null>(null);
+  const [selectedStage, setSelectedStage] = useState<number | null>(null);
 
   useEffect(() => {
     const t = setTimeout(() => setLoading(false), 800);
@@ -42,7 +36,7 @@ export default function FunnelsPage() {
               { label: "Active Users", value: "9.3K", change: "-2.1%", positive: false },
               { label: "Overall Conv.", value: "9.3%", change: "+1.2%", positive: true },
             ].map((stat) => (
-              <div key={stat.label} className="rounded-2xl border border-border bg-card p-5 shadow-card">
+              <div key={stat.label} className="rounded-2xl border border-border bg-card p-5 shadow-card hover:shadow-elevated hover:border-primary/20 transition-all duration-300">
                 <div className="text-xs text-muted-foreground mb-1.5">{stat.label}</div>
                 <div className="text-2xl font-bold text-foreground tracking-tight">{stat.value}</div>
                 <span className={cn(
@@ -56,51 +50,79 @@ export default function FunnelsPage() {
             ))}
           </div>
 
-          {/* Visual funnel + Bar chart side by side */}
-          <div className="grid lg:grid-cols-2 gap-4">
-            {/* Visual funnel */}
-            <div className="animate-fade-in-up stagger-3 rounded-2xl border border-border bg-card p-6 shadow-card">
-              <h3 className="text-base font-semibold text-foreground mb-6">Funnel Stages</h3>
-              <div className="flex flex-col items-center gap-0 select-none">
+          {/* New waterfall-style funnel visualization */}
+          <div className="animate-fade-in-up stagger-3 rounded-2xl border border-border bg-card shadow-card overflow-hidden">
+            <div className="px-8 py-6 border-b border-border">
+              <h3 className="text-lg font-semibold text-foreground">Conversion Flow</h3>
+              <p className="text-sm text-muted-foreground mt-0.5">Click any stage to view details</p>
+            </div>
+            <div className="p-8">
+              {/* Horizontal pipeline */}
+              <div className="flex items-stretch gap-0 overflow-x-auto pb-4">
                 {funnelStages.map((stage, i) => {
                   const pct = (stage.value / maxVal) * 100;
                   const next = funnelStages[i + 1];
-                  const dropoff = next ? (((stage.value - next.value) / stage.value) * 100).toFixed(1) : null;
+                  const dropoff = next ? ((stage.value - next.value) / stage.value * 100).toFixed(1) : null;
+                  const convRate = next ? ((next.value / stage.value) * 100).toFixed(1) : null;
+                  const Icon = stageIcons[i] || Target;
+                  const isSelected = selectedStage === i;
 
                   return (
-                    <div key={stage.name} className="w-full flex flex-col items-center">
-                      <div
-                        className="relative w-full flex justify-center cursor-pointer group"
-                        style={{ paddingLeft: `${(100 - pct) / 2}%`, paddingRight: `${(100 - pct) / 2}%` }}
-                        onMouseEnter={() => setHovered(i)}
-                        onMouseLeave={() => setHovered(null)}
+                    <div key={stage.name} className="flex items-stretch">
+                      {/* Stage card */}
+                      <button
+                        onClick={() => setSelectedStage(isSelected ? null : i)}
+                        className={cn(
+                          "relative flex flex-col items-center justify-between p-5 rounded-2xl border-2 transition-all duration-300 min-w-[160px] text-left group",
+                          isSelected
+                            ? "border-primary bg-accent shadow-elevated scale-[1.03]"
+                            : "border-border bg-card hover:border-primary/30 hover:shadow-card"
+                        )}
                       >
-                        <div
-                          className={cn(
-                            "w-full h-14 rounded-xl flex items-center justify-between px-5 transition-all duration-200 relative overflow-hidden",
-                            hovered === i ? "scale-[1.02] shadow-lg" : ""
-                          )}
-                          style={{ backgroundColor: `hsl(158, ${64 - i * 6}%, ${35 + i * 5}%)` }}
-                        >
-                          {/* Shimmer effect on hover */}
-                          {hovered === i && (
-                            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer" />
-                          )}
-                          <span className="text-sm font-bold text-white relative z-10">{stage.name}</span>
-                          <div className="text-right relative z-10">
-                            <div className="text-sm font-bold text-white tabular-nums">{stage.value.toLocaleString()}</div>
-                            <div className="text-[10px] text-white/70">{pct.toFixed(1)}%</div>
-                          </div>
+                        {/* Stage number badge */}
+                        <div className={cn(
+                          "absolute -top-3 left-4 h-6 w-6 rounded-full flex items-center justify-center text-[10px] font-bold",
+                          isSelected ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
+                        )}>
+                          {i + 1}
                         </div>
-                      </div>
-                      {dropoff && (
-                        <div className="flex items-center gap-2 my-2">
-                          <div className="h-5 w-px bg-border" />
-                          <div className="flex items-center gap-1 text-[11px] text-destructive font-semibold bg-destructive/8 border border-destructive/15 rounded-full px-2.5 py-1">
-                            <ArrowDown className="h-3 w-3" />
-                            {dropoff}% drop-off
+
+                        {/* Icon */}
+                        <div className={cn(
+                          "h-12 w-12 rounded-xl flex items-center justify-center mb-3 transition-colors",
+                          isSelected ? "bg-primary/15" : "bg-muted group-hover:bg-accent"
+                        )}>
+                          <Icon className={cn("h-5 w-5", isSelected ? "text-primary" : "text-muted-foreground group-hover:text-primary")} />
+                        </div>
+
+                        <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">{stage.name}</div>
+                        <div className="text-2xl font-bold text-foreground tracking-tight">{stage.value.toLocaleString()}</div>
+
+                        {/* Percentage bar */}
+                        <div className="w-full mt-3">
+                          <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
+                            <div
+                              className="h-full rounded-full bg-gradient-to-r from-primary to-primary-glow transition-all duration-700"
+                              style={{ width: `${pct}%` }}
+                            />
                           </div>
-                          <div className="h-5 w-px bg-border" />
+                          <div className="text-[10px] text-muted-foreground font-semibold mt-1 text-center">{pct.toFixed(1)}%</div>
+                        </div>
+                      </button>
+
+                      {/* Arrow connector with drop-off */}
+                      {dropoff && (
+                        <div className="flex flex-col items-center justify-center px-3 min-w-[80px]">
+                          <div className="text-[10px] font-bold text-primary mb-1">{convRate}%</div>
+                          <div className="flex items-center gap-1">
+                            <div className="h-px w-6 bg-border" />
+                            <ArrowRight className="h-4 w-4 text-primary" />
+                            <div className="h-px w-6 bg-border" />
+                          </div>
+                          <div className="flex items-center gap-0.5 mt-1">
+                            <TrendingDown className="h-2.5 w-2.5 text-destructive" />
+                            <span className="text-[10px] font-semibold text-destructive">{dropoff}%</span>
+                          </div>
                         </div>
                       )}
                     </div>
@@ -108,35 +130,51 @@ export default function FunnelsPage() {
                 })}
               </div>
             </div>
-
-            {/* Horizontal bar chart */}
-            <div className="animate-fade-in-up stagger-4 rounded-2xl border border-border bg-card p-6 shadow-card">
-              <h3 className="text-base font-semibold text-foreground mb-2">Stage Comparison</h3>
-              <p className="text-xs text-muted-foreground mb-5">Users at each funnel stage</p>
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={funnelBarData} layout="vertical" margin={{ top: 0, right: 20, left: 20, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" horizontal={false} />
-                  <XAxis type="number" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} tickLine={false} axisLine={false} tickFormatter={(v) => `${(v / 1000).toFixed(0)}K`} />
-                  <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: "hsl(var(--foreground))", fontWeight: 500 }} tickLine={false} axisLine={false} width={100} />
-                  <Tooltip
-                    contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 12, fontSize: 12, boxShadow: "0 8px 30px rgba(0,0,0,0.08)" }}
-                    formatter={(v: number) => [v.toLocaleString(), "Users"]}
-                    cursor={{ fill: "hsl(var(--primary) / 0.05)" }}
-                  />
-                  <Bar dataKey="value" radius={[0, 6, 6, 0]} barSize={32}>
-                    {funnelBarData.map((entry, index) => (
-                      <Cell key={index} fill={entry.fill} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
           </div>
 
-          {/* Summary table */}
+          {/* Selected stage details */}
+          {selectedStage !== null && (
+            <div className="animate-fade-in-up rounded-2xl border border-primary/20 bg-accent/30 p-6 shadow-card">
+              <div className="flex items-center gap-4 mb-4">
+                <div className="h-10 w-10 rounded-xl bg-primary/15 flex items-center justify-center">
+                  {(() => { const Icon = stageIcons[selectedStage] || Target; return <Icon className="h-5 w-5 text-primary" />; })()}
+                </div>
+                <div>
+                  <h4 className="text-base font-semibold text-foreground">{funnelStages[selectedStage].name} — Stage {selectedStage + 1}</h4>
+                  <p className="text-xs text-muted-foreground">{funnelStages[selectedStage].value.toLocaleString()} users reached this stage</p>
+                </div>
+              </div>
+              <div className="grid md:grid-cols-3 gap-4">
+                <div className="p-4 rounded-xl border border-border bg-card">
+                  <div className="text-xs text-muted-foreground mb-1">From Previous</div>
+                  <div className="text-lg font-bold text-foreground">
+                    {selectedStage > 0
+                      ? `${((funnelStages[selectedStage].value / funnelStages[selectedStage - 1].value) * 100).toFixed(1)}%`
+                      : "—"}
+                  </div>
+                </div>
+                <div className="p-4 rounded-xl border border-border bg-card">
+                  <div className="text-xs text-muted-foreground mb-1">From Top of Funnel</div>
+                  <div className="text-lg font-bold text-primary">
+                    {((funnelStages[selectedStage].value / maxVal) * 100).toFixed(1)}%
+                  </div>
+                </div>
+                <div className="p-4 rounded-xl border border-border bg-card">
+                  <div className="text-xs text-muted-foreground mb-1">Users Lost</div>
+                  <div className="text-lg font-bold text-destructive">
+                    {selectedStage > 0
+                      ? (funnelStages[selectedStage - 1].value - funnelStages[selectedStage].value).toLocaleString()
+                      : "0"}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Stage breakdown table */}
           <div className="animate-fade-in-up stagger-5 rounded-2xl border border-border bg-card shadow-card overflow-hidden">
             <div className="px-6 py-5 border-b border-border flex items-center justify-between">
-              <h3 className="text-base font-semibold text-foreground">Stage Details</h3>
+              <h3 className="text-base font-semibold text-foreground">Stage Breakdown</h3>
               <div className="flex items-center gap-1.5 text-xs text-primary font-medium cursor-pointer hover:underline">
                 Export <ArrowUpRight className="h-3 w-3" />
               </div>
@@ -160,7 +198,9 @@ export default function FunnelsPage() {
                     return (
                       <tr key={stage.name} className="border-b border-border last:border-0 hover:bg-muted/20 transition-colors">
                         <td className="px-6 py-4 flex items-center gap-3">
-                          <div className="h-3 w-3 rounded-full" style={{ backgroundColor: `hsl(158, ${64 - i * 6}%, ${35 + i * 5}%)` }} />
+                          <div className="h-8 w-8 rounded-lg bg-accent flex items-center justify-center">
+                            {(() => { const Icon = stageIcons[i] || Target; return <Icon className="h-3.5 w-3.5 text-primary" />; })()}
+                          </div>
                           <span className="text-foreground font-medium">{stage.name}</span>
                         </td>
                         <td className="px-6 py-4 text-right font-mono text-foreground font-bold">{stage.value.toLocaleString()}</td>
