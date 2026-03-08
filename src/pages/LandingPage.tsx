@@ -176,7 +176,7 @@ export default function LandingPage() {
 
               <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.35 }}
                 className="flex flex-col sm:flex-row gap-3 mb-8">
-                <Link to="/"
+                <Link to="/dashboard"
                   className="inline-flex items-center justify-center gap-2 px-7 py-3.5 rounded-2xl bg-primary text-primary-foreground text-sm font-semibold hover:opacity-90 transition-all shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/25">
                   Open Dashboard <ArrowRight className="h-4 w-4" />
                 </Link>
