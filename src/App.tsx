@@ -25,17 +25,17 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <Routes>
-          <Route path="/landing" element={<LandingPage />} />
+          <Route path="/" element={<LandingPage />} />
           <Route element={<DashboardLayout />}>
-            <Route path="/" element={<OverviewPage />} />
-            <Route path="/realtime" element={<RealTimePage />} />
-            <Route path="/funnels" element={<FunnelsPage />} />
-            <Route path="/retention" element={<RetentionPage />} />
-            <Route path="/performance" element={<PerformancePage />} />
-            <Route path="/heatmaps" element={<HeatmapsPage />} />
-            <Route path="/sessions" element={<SessionReplayPage />} />
-            <Route path="/settings" element={<AccountSettingsPage />} />
-            <Route path="/team" element={<TeamManagementPage />} />
+            <Route path="/dashboard" element={<OverviewPage />} />
+            <Route path="/dashboard/realtime" element={<RealTimePage />} />
+            <Route path="/dashboard/funnels" element={<FunnelsPage />} />
+            <Route path="/dashboard/retention" element={<RetentionPage />} />
+            <Route path="/dashboard/performance" element={<PerformancePage />} />
+            <Route path="/dashboard/heatmaps" element={<HeatmapsPage />} />
+            <Route path="/dashboard/sessions" element={<SessionReplayPage />} />
+            <Route path="/dashboard/settings" element={<AccountSettingsPage />} />
+            <Route path="/dashboard/team" element={<TeamManagementPage />} />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>

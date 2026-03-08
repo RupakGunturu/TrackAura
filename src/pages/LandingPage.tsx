@@ -17,12 +17,12 @@ const fadeUp = {
 };
 
 const features = [
-  { icon: BarChart3, title: "Real-Time Analytics", desc: "Monitor live user activity, sessions, and events as they happen across your entire platform.", link: "/realtime" },
-  { icon: MousePointerClick, title: "Click Heatmaps", desc: "Visualize exactly where users click, scroll, and engage on every page of your product.", link: "/heatmaps" },
-  { icon: Layers, title: "Conversion Funnels", desc: "Track user journeys from landing to conversion with detailed drop-off analysis at every step.", link: "/funnels" },
-  { icon: Activity, title: "Retention Cohorts", desc: "Understand how well you retain users over time with beautiful cohort heatmaps and trend analysis.", link: "/retention" },
-  { icon: Eye, title: "Session Replay", desc: "Watch real user sessions to understand behavior, identify friction, and improve UX.", link: "/sessions" },
-  { icon: LineChart, title: "Performance Metrics", desc: "Track API response times, error rates, and infrastructure health in one unified dashboard.", link: "/performance" },
+  { icon: BarChart3, title: "Real-Time Analytics", desc: "Monitor live user activity, sessions, and events as they happen across your entire platform.", link: "/dashboard/realtime" },
+  { icon: MousePointerClick, title: "Click Heatmaps", desc: "Visualize exactly where users click, scroll, and engage on every page of your product.", link: "/dashboard/heatmaps" },
+  { icon: Layers, title: "Conversion Funnels", desc: "Track user journeys from landing to conversion with detailed drop-off analysis at every step.", link: "/dashboard/funnels" },
+  { icon: Activity, title: "Retention Cohorts", desc: "Understand how well you retain users over time with beautiful cohort heatmaps and trend analysis.", link: "/dashboard/retention" },
+  { icon: Eye, title: "Session Replay", desc: "Watch real user sessions to understand behavior, identify friction, and improve UX.", link: "/dashboard/sessions" },
+  { icon: LineChart, title: "Performance Metrics", desc: "Track API response times, error rates, and infrastructure health in one unified dashboard.", link: "/dashboard/performance" },
 ];
 
 const integrationSteps = [
@@ -92,7 +92,7 @@ export default function LandingPage() {
       {/* ─── NAVBAR ─── */}
       <nav className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border/50">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-          <Link to="/landing" className="flex items-center gap-2.5">
+          <Link to="/" className="flex items-center gap-2.5">
             <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-primary to-primary-glow flex items-center justify-center">
               <Zap className="h-4 w-4 text-primary-foreground" />
             </div>
@@ -108,10 +108,10 @@ export default function LandingPage() {
           </div>
 
           <div className="hidden md:flex items-center gap-3">
-            <Link to="/" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors px-4 py-2">
+            <Link to="/dashboard" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors px-4 py-2">
               Dashboard
             </Link>
-            <Link to="/" className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-semibold hover:opacity-90 transition-opacity shadow-sm">
+            <Link to="/dashboard" className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-semibold hover:opacity-90 transition-opacity shadow-sm">
               Get Started <ArrowRight className="h-3.5 w-3.5" />
             </Link>
           </div>
@@ -127,7 +127,7 @@ export default function LandingPage() {
               {["Features", "Integration", "How It Works"].map((item) => (
                 <a key={item} href={`#${item.toLowerCase().replace(/\s/g, "-")}`} className="text-sm text-muted-foreground" onClick={() => setMobileMenuOpen(false)}>{item}</a>
               ))}
-              <Link to="/" className="mt-2 inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-semibold">
+              <Link to="/dashboard" className="mt-2 inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-semibold">
                 Get Started <ArrowRight className="h-3.5 w-3.5" />
               </Link>
             </div>
@@ -176,7 +176,7 @@ export default function LandingPage() {
 
               <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.35 }}
                 className="flex flex-col sm:flex-row gap-3 mb-8">
-                <Link to="/"
+                <Link to="/dashboard"
                   className="inline-flex items-center justify-center gap-2 px-7 py-3.5 rounded-2xl bg-primary text-primary-foreground text-sm font-semibold hover:opacity-90 transition-all shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/25">
                   Open Dashboard <ArrowRight className="h-4 w-4" />
                 </Link>
@@ -533,7 +533,7 @@ export default function LandingPage() {
               Add TrackAura in under 2 minutes. No credit card. No complex setup. Just insights.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-              <Link to="/"
+              <Link to="/dashboard"
                 className="inline-flex items-center gap-2 px-8 py-3.5 rounded-2xl bg-white text-primary text-base font-semibold hover:bg-white/90 transition-colors shadow-lg">
                 Open Dashboard <ArrowRight className="h-4 w-4" />
               </Link>

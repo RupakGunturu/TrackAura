@@ -35,13 +35,13 @@ import {
 import { cn } from "@/lib/utils";
 
 const navItems = [
-  { title: "Overview", url: "/", icon: LayoutDashboard },
-  { title: "Real-Time", url: "/realtime", icon: Radio },
-  { title: "Funnels", url: "/funnels", icon: Filter },
-  { title: "Retention", url: "/retention", icon: Users },
-  { title: "Performance", url: "/performance", icon: Activity },
-  { title: "Heatmaps", url: "/heatmaps", icon: MousePointerClick },
-  { title: "Sessions", url: "/sessions", icon: Play },
+  { title: "Overview", url: "/dashboard", icon: LayoutDashboard },
+  { title: "Real-Time", url: "/dashboard/realtime", icon: Radio },
+  { title: "Funnels", url: "/dashboard/funnels", icon: Filter },
+  { title: "Retention", url: "/dashboard/retention", icon: Users },
+  { title: "Performance", url: "/dashboard/performance", icon: Activity },
+  { title: "Heatmaps", url: "/dashboard/heatmaps", icon: MousePointerClick },
+  { title: "Sessions", url: "/dashboard/sessions", icon: Play },
 ];
 
 export function AppSidebar() {
@@ -137,13 +137,13 @@ export function AppSidebar() {
             </div>
             <DropdownMenuSeparator />
             <DropdownMenuItem className="gap-2" asChild>
-              <a href="/settings">
+              <a href="/dashboard/settings">
                 <Settings className="h-4 w-4" />
                 Account Settings
               </a>
             </DropdownMenuItem>
             <DropdownMenuItem className="gap-2" asChild>
-              <a href="/team">
+              <a href="/dashboard/team">
                 <Users className="h-4 w-4" />
                 Team Management
               </a>
