@@ -127,7 +127,7 @@ export default function LandingPage() {
               {["Features", "Integration", "How It Works"].map((item) => (
                 <a key={item} href={`#${item.toLowerCase().replace(/\s/g, "-")}`} className="text-sm text-muted-foreground" onClick={() => setMobileMenuOpen(false)}>{item}</a>
               ))}
-              <Link to="/" className="mt-2 inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-semibold">
+              <Link to="/dashboard" className="mt-2 inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-semibold">
                 Get Started <ArrowRight className="h-3.5 w-3.5" />
               </Link>
             </div>
