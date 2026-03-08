@@ -10,6 +10,7 @@ import FunnelsPage from "./pages/FunnelsPage";
 import RetentionPage from "./pages/RetentionPage";
 import PerformancePage from "./pages/PerformancePage";
 import HeatmapsPage from "./pages/HeatmapsPage";
+import SessionReplayPage from "./pages/SessionReplayPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -28,6 +29,7 @@ const App = () => (
             <Route path="/retention" element={<RetentionPage />} />
             <Route path="/performance" element={<PerformancePage />} />
             <Route path="/heatmaps" element={<HeatmapsPage />} />
+            <Route path="/sessions" element={<SessionReplayPage />} />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>
