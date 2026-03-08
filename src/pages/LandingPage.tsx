@@ -17,12 +17,12 @@ const fadeUp = {
 };
 
 const features = [
-  { icon: BarChart3, title: "Real-Time Analytics", desc: "Monitor live user activity, sessions, and events as they happen across your entire platform.", link: "/realtime" },
-  { icon: MousePointerClick, title: "Click Heatmaps", desc: "Visualize exactly where users click, scroll, and engage on every page of your product.", link: "/heatmaps" },
-  { icon: Layers, title: "Conversion Funnels", desc: "Track user journeys from landing to conversion with detailed drop-off analysis at every step.", link: "/funnels" },
-  { icon: Activity, title: "Retention Cohorts", desc: "Understand how well you retain users over time with beautiful cohort heatmaps and trend analysis.", link: "/retention" },
-  { icon: Eye, title: "Session Replay", desc: "Watch real user sessions to understand behavior, identify friction, and improve UX.", link: "/sessions" },
-  { icon: LineChart, title: "Performance Metrics", desc: "Track API response times, error rates, and infrastructure health in one unified dashboard.", link: "/performance" },
+  { icon: BarChart3, title: "Real-Time Analytics", desc: "Monitor live user activity, sessions, and events as they happen across your entire platform.", link: "/dashboard/realtime" },
+  { icon: MousePointerClick, title: "Click Heatmaps", desc: "Visualize exactly where users click, scroll, and engage on every page of your product.", link: "/dashboard/heatmaps" },
+  { icon: Layers, title: "Conversion Funnels", desc: "Track user journeys from landing to conversion with detailed drop-off analysis at every step.", link: "/dashboard/funnels" },
+  { icon: Activity, title: "Retention Cohorts", desc: "Understand how well you retain users over time with beautiful cohort heatmaps and trend analysis.", link: "/dashboard/retention" },
+  { icon: Eye, title: "Session Replay", desc: "Watch real user sessions to understand behavior, identify friction, and improve UX.", link: "/dashboard/sessions" },
+  { icon: LineChart, title: "Performance Metrics", desc: "Track API response times, error rates, and infrastructure health in one unified dashboard.", link: "/dashboard/performance" },
 ];
 
 const integrationSteps = [
