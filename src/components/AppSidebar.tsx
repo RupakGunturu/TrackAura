@@ -136,13 +136,17 @@ export function AppSidebar() {
               <div className="text-xs text-muted-foreground">john@trackaura.com</div>
             </div>
             <DropdownMenuSeparator />
-            <DropdownMenuItem className="gap-2">
-              <Settings className="h-4 w-4" />
-              Account Settings
+            <DropdownMenuItem className="gap-2" asChild>
+              <a href="/settings">
+                <Settings className="h-4 w-4" />
+                Account Settings
+              </a>
             </DropdownMenuItem>
-            <DropdownMenuItem className="gap-2">
-              <Users className="h-4 w-4" />
-              Team Management
+            <DropdownMenuItem className="gap-2" asChild>
+              <a href="/team">
+                <Users className="h-4 w-4" />
+                Team Management
+              </a>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem className="gap-2 text-destructive focus:text-destructive">
