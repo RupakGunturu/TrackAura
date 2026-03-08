@@ -35,13 +35,13 @@ import {
 import { cn } from "@/lib/utils";
 
 const navItems = [
-  { title: "Overview", url: "/", icon: LayoutDashboard },
-  { title: "Real-Time", url: "/realtime", icon: Radio },
-  { title: "Funnels", url: "/funnels", icon: Filter },
-  { title: "Retention", url: "/retention", icon: Users },
-  { title: "Performance", url: "/performance", icon: Activity },
-  { title: "Heatmaps", url: "/heatmaps", icon: MousePointerClick },
-  { title: "Sessions", url: "/sessions", icon: Play },
+  { title: "Overview", url: "/dashboard", icon: LayoutDashboard },
+  { title: "Real-Time", url: "/dashboard/realtime", icon: Radio },
+  { title: "Funnels", url: "/dashboard/funnels", icon: Filter },
+  { title: "Retention", url: "/dashboard/retention", icon: Users },
+  { title: "Performance", url: "/dashboard/performance", icon: Activity },
+  { title: "Heatmaps", url: "/dashboard/heatmaps", icon: MousePointerClick },
+  { title: "Sessions", url: "/dashboard/sessions", icon: Play },
 ];
 
 export function AppSidebar() {
