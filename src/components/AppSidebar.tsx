@@ -41,6 +41,7 @@ const navItems = [
   { title: "Funnels", url: "/funnels", icon: Filter },
   { title: "Retention", url: "/retention", icon: Users },
   { title: "Performance", url: "/performance", icon: Activity },
+  { title: "Heatmaps", url: "/dashboard/heatmaps", icon: Flame },
 ];
 
 export function AppSidebar() {

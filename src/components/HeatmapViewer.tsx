@@ -6,18 +6,21 @@ import {
   type HeatmapMode,
   type HeatmapPoint,
 } from "@/lib/heatmapData";
+import type { LiveHeatmapPoint } from "@/lib/heatmapApi";
 import { ZoomIn, ZoomOut, Maximize2, Minimize2 } from "lucide-react";
 import WebpagePreview from "./WebpagePreview";
 
 interface HeatmapViewerProps {
   mode: HeatmapMode;
   loading?: boolean;
+  liveData?: LiveHeatmapPoint[];
 }
 
 /* ─── Main Viewer ─── */
 const HeatmapViewer: React.FC<HeatmapViewerProps> = ({
   mode,
   loading = false,
+  liveData,
 }) => {
   const wrapperRef = useRef<HTMLDivElement>(null);
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
@@ -46,9 +49,19 @@ const HeatmapViewer: React.FC<HeatmapViewerProps> = ({
   // ── Scale data when dimensions or mode change ──
   useEffect(() => {
     if (dimensions.width > 0 && dimensions.height > 0) {
+      if (liveData && liveData.length > 0) {
+        const mapped = liveData.map((point) => ({
+          x: Math.round(point.xRatio * dimensions.width),
+          y: Math.round(point.yRatio * dimensions.height),
+          value: point.value,
+        }));
+        setScaledData(mapped);
+        return;
+      }
+
       setScaledData(getScaledData(mode, dimensions.width, dimensions.height));
     }
-  }, [mode, dimensions]);
+  }, [mode, dimensions, liveData]);
 
   const radiusMap: Record<HeatmapMode, number> = {
     click: 35,

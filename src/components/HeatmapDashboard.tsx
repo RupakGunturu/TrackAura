@@ -11,26 +11,36 @@ import {
   type HeatmapMode,
 } from "@/lib/heatmapData";
 import { FileQuestion } from "lucide-react";
+import { useHeatmapQuery } from "@/hooks/useHeatmapQuery";
+import { startHeatmapTracker } from "@/lib/tracker";
 
 const HeatmapDashboard: React.FC = () => {
   const [mode, setMode] = useState<HeatmapMode>("click");
-  const [loading, setLoading] = useState(true);
-  const hasData = true; // toggle to test empty state
+  const projectId = import.meta.env.VITE_PROJECT_ID || "demo-project";
+  const pagePath = "/dashboard/heatmaps";
 
-  // Simulate initial load
+  const { data, isLoading } = useHeatmapQuery({
+    projectId,
+    pagePath,
+    mode,
+  });
+
+  const hasData = (data?.points?.length ?? 0) > 0;
+
   useEffect(() => {
-    const timer = setTimeout(() => setLoading(false), 1200);
-    return () => clearTimeout(timer);
-  }, []);
+    const stopTracker = startHeatmapTracker({
+      projectId,
+      pagePath,
+    });
 
-  // Brief loading flash on mode change
+    return () => stopTracker();
+  }, [projectId, pagePath]);
+
   const handleModeChange = (newMode: HeatmapMode) => {
-    setLoading(true);
     setMode(newMode);
-    setTimeout(() => setLoading(false), 400);
   };
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="px-2 py-6">
         <HeatmapSkeleton />
@@ -82,7 +92,7 @@ const HeatmapDashboard: React.FC = () => {
               exit={{ opacity: 0 }}
               transition={{ duration: 0.3 }}
             >
-              <HeatmapViewer mode={mode} loading={false} />
+              <HeatmapViewer mode={mode} loading={false} liveData={data?.points ?? []} />
             </motion.div>
           </AnimatePresence>
         </div>
