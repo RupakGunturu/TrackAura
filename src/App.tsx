@@ -12,6 +12,7 @@ import PerformancePage from "./pages/PerformancePage";
 import SessionReplayPage from "./pages/SessionReplayPage";
 import AccountSettingsPage from "./pages/AccountSettingsPage";
 import TeamManagementPage from "./pages/TeamManagementPage";
+import ProjectsPage from "./pages/ProjectsPage";
 import LandingPage from "./pages/LandingPage";
 import HeatmapDashboard from "./components/HeatmapDashboard";
 import NotFound from "./pages/NotFound";
@@ -36,12 +37,14 @@ const App = () => (
             <Route path="/dashboard/sessions" element={<SessionReplayPage />} />
             <Route path="/dashboard/settings" element={<AccountSettingsPage />} />
             <Route path="/dashboard/team" element={<TeamManagementPage />} />
+            <Route path="/dashboard/projects" element={<ProjectsPage />} />
             <Route path="/" element={<OverviewPage />} />
             <Route path="/realtime" element={<RealTimePage />} />
             <Route path="/funnels" element={<FunnelsPage />} />
             <Route path="/retention" element={<RetentionPage />} />
             <Route path="/performance" element={<PerformancePage />} />
             <Route path="/heatmap" element={<HeatmapDashboard />} />
+            <Route path="/projects" element={<ProjectsPage />} />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>

@@ -1,10 +1,12 @@
 import cors from "cors";
 import express from "express";
 import { env } from "./config/env.js";
+import { analyticsRouter } from "./routes/analytics.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 import { eventsRouter } from "./routes/events.js";
 import { healthRouter } from "./routes/health.js";
 import { heatmapRouter } from "./routes/heatmap.js";
+import { projectsRouter } from "./routes/projects.js";
 
 const app = express();
 
@@ -18,6 +20,8 @@ app.use(express.json({ limit: "1mb" }));
 app.use("/api", healthRouter);
 app.use("/api", eventsRouter);
 app.use("/api", heatmapRouter);
+app.use("/api", analyticsRouter);
+app.use("/api", projectsRouter);
 
 app.use(errorHandler);
 

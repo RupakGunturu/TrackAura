@@ -1,180 +1,150 @@
-import { useState, useEffect, useRef } from "react";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from "recharts";
+import { useState } from "react";
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { useQuery } from "@tanstack/react-query";
+import { Globe, FileText } from "lucide-react";
 import { FilterBar } from "@/components/FilterBar";
-import { generateRealtimeData } from "@/lib/mockData";
-import { cn } from "@/lib/utils";
-import { Globe, Monitor, FileText, ArrowUpRight } from "lucide-react";
+import { SkeletonCard } from "@/components/SkeletonCard";
+import {
+  getDateRangeBounds,
+  getProjectLabel,
+  normalizeProjectIds,
+  type DashboardDateRange,
+  type DashboardDevice,
+  type DashboardFilters,
+  type DashboardUserType,
+} from "@/lib/dashboardFilters";
+import { fetchRealtimeAnalytics } from "@/lib/analyticsApi";
+import { useActiveProjectIds } from "@/hooks/useActiveProjectIds";
 
 export default function RealTimePage() {
-  const [data, setData] = useState(() => generateRealtimeData(60));
-  const [count, setCount] = useState(2847);
-  const [lastUpdated, setLastUpdated] = useState(new Date());
-  const [trend, setTrend] = useState<"up" | "down" | "stable">("stable");
-  const prevCount = useRef(count);
+  const fallbackProjectIds = import.meta.env.VITE_PROJECT_ID || "demo-project";
+  const { activeProjectIds, setActiveProjectIds } = useActiveProjectIds(fallbackProjectIds);
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setData((prev) => {
-        const last = prev[prev.length - 1];
-        const newVal = Math.max(
-          2400,
-          Math.min(3600, last.v + Math.round((Math.random() - 0.48) * 80))
-        );
-        const next = [...prev.slice(1), { t: last.t + 1, v: newVal }];
-        setCount(newVal);
-        setLastUpdated(new Date());
-        setTrend(newVal > prevCount.current ? "up" : newVal < prevCount.current ? "down" : "stable");
-        prevCount.current = newVal;
-        return next;
-      });
-    }, 2000);
-    return () => clearInterval(interval);
-  }, []);
+  const [filters, setFilters] = useState<DashboardFilters>({
+    dateRange: "Last 30 days",
+    device: "All Devices",
+    userType: "All Users",
+    projectIds: activeProjectIds,
+  });
+  const normalizedProjectIds = normalizeProjectIds(activeProjectIds || fallbackProjectIds);
 
-  const regions = [
-    { name: "North America", pct: 38, users: Math.round(count * 0.38), flag: "🇺🇸" },
-    { name: "Europe", pct: 27, users: Math.round(count * 0.27), flag: "🇪🇺" },
-    { name: "Asia-Pacific", pct: 22, users: Math.round(count * 0.22), flag: "🌏" },
-    { name: "Rest of World", pct: 13, users: Math.round(count * 0.13), flag: "🌍" },
-  ];
+  const { start, end } = getDateRangeBounds(filters.dateRange);
 
-  const pages = [
-    { path: "/dashboard", pct: 31 },
-    { path: "/onboarding", pct: 18 },
-    { path: "/reports", pct: 14 },
-    { path: "/profile", pct: 12 },
-    { path: "/settings", pct: 9 },
-  ];
+  const { data, isLoading, isFetching, refetch } = useQuery({
+    queryKey: ["analytics", "realtime", normalizedProjectIds, start, end, filters.device, filters.userType],
+    queryFn: () =>
+      fetchRealtimeAnalytics({
+        projectIds: normalizedProjectIds,
+        start,
+        end,
+        device: filters.device,
+        userType: filters.userType,
+      }),
+    refetchInterval: 5000,
+  });
+
+  const projectLabel = getProjectLabel(normalizedProjectIds);
+
+  const handleExport = () => {
+    if (!data) return;
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `realtime-${normalizedProjectIds.replace(/[^a-z0-9,-]/gi, "_")}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   return (
     <div className="space-y-6">
-      <div className="animate-fade-in-up stagger-1">
-        <FilterBar title="Real-Time" subtitle="Live user activity — updates every 2 seconds" />
-      </div>
+      <FilterBar
+        title="Real-Time"
+        subtitle={`Live user activity from database · ${projectLabel}`}
+        dateRange={filters.dateRange}
+        device={filters.device}
+        userType={filters.userType}
+        projectIds={activeProjectIds}
+        onDateRangeChange={(value: DashboardDateRange) => setFilters((prev) => ({ ...prev, dateRange: value }))}
+        onDeviceChange={(value: DashboardDevice) => setFilters((prev) => ({ ...prev, device: value }))}
+        onUserTypeChange={(value: DashboardUserType) => setFilters((prev) => ({ ...prev, userType: value }))}
+        onProjectIdsChange={setActiveProjectIds}
+        onRefresh={() => refetch()}
+        onExport={handleExport}
+      />
 
-      {/* Hero counter */}
-      <div className="animate-fade-in-up stagger-2 rounded-2xl border border-border bg-card shadow-elevated overflow-hidden">
-        <div className="relative bg-gradient-to-br from-accent via-primary/5 to-transparent p-8 sm:p-10">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
-            <div className="flex items-center gap-5">
-              {/* Pulsing dot */}
-              <div className="relative">
-                <div className="h-6 w-6 rounded-full bg-primary opacity-20 absolute inset-0 animate-ping" />
-                <div className="h-6 w-6 rounded-full bg-primary relative z-10 flex items-center justify-center shadow-lg">
-                  <div className="h-3 w-3 rounded-full bg-primary-foreground" />
-                </div>
-              </div>
+      {isLoading ? (
+        <SkeletonCard lines={8} />
+      ) : (
+        <>
+          <div className="rounded-2xl border border-border bg-card shadow-card p-6">
+            <div className="flex items-start justify-between gap-4">
               <div>
-                <div
-                  className={cn(
-                    "text-6xl font-bold tracking-tighter tabular-nums transition-all duration-500",
-                    trend === "up" && "text-primary",
-                    trend === "down" && "text-destructive",
-                    trend === "stable" && "text-foreground"
-                  )}
-                >
-                  {count.toLocaleString()}
+                <div className="text-xs text-muted-foreground">Users online right now</div>
+                <div className="text-5xl font-bold tracking-tight mt-1">{data?.onlineUsers?.toLocaleString() ?? 0}</div>
+                <div className="text-xs text-muted-foreground mt-2">
+                  Trend: {data?.trend ?? "stable"} · Updated {data ? new Date(data.lastUpdated).toLocaleTimeString() : "-"}
                 </div>
-                <div className="text-sm text-muted-foreground mt-1 font-medium">users online right now</div>
+              </div>
+              <span className="text-xs text-primary font-medium">{isFetching ? "Refreshing..." : "Live"}</span>
+            </div>
+            <div className="mt-5">
+              <ResponsiveContainer width="100%" height={160}>
+                <AreaChart data={data?.data ?? []} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="gRealtimeLive" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="hsl(158,64%,35%)" stopOpacity={0.25} />
+                      <stop offset="95%" stopColor="hsl(158,64%,35%)" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="2 2" stroke="hsl(var(--border))" vertical={false} />
+                  <XAxis dataKey="t" hide />
+                  <YAxis tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} tickLine={false} axisLine={false} />
+                  <Tooltip formatter={(v: number) => [v.toLocaleString(), "Active sessions"]} />
+                  <Area type="monotone" dataKey="v" stroke="hsl(158,64%,35%)" strokeWidth={2} fill="url(#gRealtimeLive)" />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-4">
+            <div className="rounded-2xl border border-border bg-card p-6 shadow-card">
+              <div className="flex items-center gap-2 mb-4">
+                <Globe className="h-4 w-4 text-primary" />
+                <h3 className="text-base font-semibold">Users by Region</h3>
+              </div>
+              <div className="space-y-3">
+                {(data?.regions ?? []).map((region) => (
+                  <div key={region.name}>
+                    <div className="flex items-center justify-between text-sm mb-1">
+                      <span>{region.name}</span>
+                      <span className="font-semibold">{region.users.toLocaleString()}</span>
+                    </div>
+                    <div className="h-2 rounded-full bg-muted overflow-hidden">
+                      <div className="h-full bg-primary/70" style={{ width: `${region.pct}%` }} />
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
-            <div className="sm:ml-auto text-left sm:text-right space-y-1">
-              <div className={cn(
-                "inline-flex items-center gap-1.5 text-sm font-semibold px-3 py-1 rounded-full",
-                trend === "up" && "text-primary bg-accent",
-                trend === "down" && "text-destructive bg-destructive/10",
-                trend === "stable" && "text-muted-foreground bg-muted"
-              )}>
-                {trend === "up" ? "↑ Increasing" : trend === "down" ? "↓ Decreasing" : "→ Stable"}
+
+            <div className="rounded-2xl border border-border bg-card p-6 shadow-card">
+              <div className="flex items-center gap-2 mb-4">
+                <FileText className="h-4 w-4 text-primary" />
+                <h3 className="text-base font-semibold">Active Pages</h3>
               </div>
-              <div className="text-xs text-muted-foreground">
-                Last updated: <span className="font-mono text-foreground">{lastUpdated.toLocaleTimeString()}</span>
+              <div className="space-y-2">
+                {(data?.pages ?? []).map((page) => (
+                  <div key={page.path} className="flex items-center justify-between text-sm">
+                    <span className="font-mono truncate">{page.path}</span>
+                    <span className="font-semibold">{page.events.toLocaleString()}</span>
+                  </div>
+                ))}
               </div>
             </div>
           </div>
-        </div>
-
-        {/* Sparkline */}
-        <div className="px-6 pb-6 pt-2">
-          <p className="text-xs text-muted-foreground mb-3 font-medium">Last 60 readings · 2s interval</p>
-          <ResponsiveContainer width="100%" height={130}>
-            <AreaChart data={data} margin={{ top: 4, right: 4, left: -30, bottom: 0 }}>
-              <defs>
-                <linearGradient id="gRealtime" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="hsl(158,64%,35%)" stopOpacity={0.2} />
-                  <stop offset="95%" stopColor="hsl(158,64%,35%)" stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="2 2" stroke="hsl(var(--border))" vertical={false} />
-              <XAxis dataKey="t" hide />
-              <YAxis tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} tickLine={false} axisLine={false} domain={["auto", "auto"]} />
-              <Tooltip
-                contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 12, fontSize: 12, boxShadow: "var(--shadow-elevated)" }}
-                labelFormatter={() => "Users"}
-                formatter={(v: number) => [v.toLocaleString(), "Online"]}
-              />
-              <Area
-                type="monotone"
-                dataKey="v"
-                stroke="hsl(158,64%,35%)"
-                strokeWidth={2}
-                fill="url(#gRealtime)"
-                dot={false}
-                activeDot={{ r: 4, fill: "hsl(158,64%,35%)" }}
-                isAnimationActive={false}
-              />
-            </AreaChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
-
-      {/* Regional breakdown + Active pages */}
-      <div className="grid md:grid-cols-2 gap-4">
-        <div className="animate-fade-in-up stagger-3 rounded-2xl border border-border bg-card p-6 shadow-card hover:shadow-elevated transition-shadow">
-          <div className="flex items-center gap-2 mb-5">
-            <Globe className="h-4 w-4 text-primary" />
-            <h3 className="text-base font-semibold text-foreground">Users by Region</h3>
-          </div>
-          <div className="space-y-4">
-            {regions.map((r) => (
-              <div key={r.name}>
-                <div className="flex items-center justify-between text-sm mb-1.5">
-                  <span className="flex items-center gap-2">
-                    <span>{r.flag}</span>
-                    <span className="text-foreground font-medium">{r.name}</span>
-                  </span>
-                  <span className="text-foreground font-bold tabular-nums">{r.users.toLocaleString()}</span>
-                </div>
-                <div className="h-2 rounded-full bg-muted overflow-hidden">
-                  <div
-                    className="h-full rounded-full bg-primary/70 transition-all duration-700"
-                    style={{ width: `${r.pct}%` }}
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="animate-fade-in-up stagger-4 rounded-2xl border border-border bg-card p-6 shadow-card hover:shadow-elevated transition-shadow">
-          <div className="flex items-center gap-2 mb-5">
-            <FileText className="h-4 w-4 text-primary" />
-            <h3 className="text-base font-semibold text-foreground">Active Pages</h3>
-          </div>
-          <div className="space-y-3">
-            {pages.map((p) => (
-              <div key={p.path} className="flex items-center gap-3 py-1">
-                <div className="h-2 w-2 rounded-full bg-primary shrink-0 animate-pulse-dot" />
-                <span className="text-sm font-mono text-foreground flex-1 truncate">{p.path}</span>
-                <span className="text-sm text-foreground font-semibold tabular-nums">
-                  ~{Math.round(count * p.pct / 100)}
-                </span>
-                <span className="text-xs text-muted-foreground">users</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
+        </>
+      )}
     </div>
   );
 }

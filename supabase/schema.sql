@@ -1,3 +1,14 @@
+create table if not exists projects (
+  id uuid primary key,
+  name text not null,
+  website_url text,
+  api_key text not null unique,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists idx_projects_created_at
+  on projects (created_at desc);
+
 create table if not exists interaction_events (
   id bigint generated always as identity primary key,
   project_id text not null,

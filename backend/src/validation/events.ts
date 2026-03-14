@@ -30,5 +30,17 @@ export const heatmapQuerySchema = z.object({
   limit: z.coerce.number().int().min(100).max(20000).default(5000),
 });
 
+export const analyticsQuerySchema = z.object({
+  projectIds: z.string().min(1),
+  start: z.string().datetime().optional(),
+  end: z.string().datetime().optional(),
+  deviceType: z.enum(["desktop", "tablet", "mobile"]).optional(),
+  userType: z.enum(["free", "pro", "enterprise"]).optional(),
+  pagePath: z.string().optional(),
+  search: z.string().optional(),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+});
+
 export type EventsBatchInput = z.infer<typeof eventsBatchSchema>;
 export type HeatmapQueryInput = z.infer<typeof heatmapQuerySchema>;
+export type AnalyticsQueryInput = z.infer<typeof analyticsQuerySchema>;

@@ -13,9 +13,19 @@ import {
 } from "lucide-react";
 import type { HeatmapMode } from "@/lib/heatmapData";
 
+export type DeviceType = "desktop" | "tablet" | "mobile";
+export type DateRangePreset = "24h" | "7d" | "30d";
+
 interface HeatmapControlsProps {
   mode: HeatmapMode;
   onModeChange: (mode: HeatmapMode) => void;
+  dateRange: DateRangePreset;
+  onDateRangeChange: (range: DateRangePreset) => void;
+  deviceType: DeviceType;
+  onDeviceTypeChange: (deviceType: DeviceType) => void;
+  onExport: () => void;
+  onRefresh: () => void;
+  isRefreshing?: boolean;
 }
 
 const modes: { key: HeatmapMode; label: string; icon: React.ReactNode }[] = [
@@ -27,7 +37,27 @@ const modes: { key: HeatmapMode; label: string; icon: React.ReactNode }[] = [
 const HeatmapControls: React.FC<HeatmapControlsProps> = ({
   mode,
   onModeChange,
+  dateRange,
+  onDateRangeChange,
+  deviceType,
+  onDeviceTypeChange,
+  onExport,
+  onRefresh,
+  isRefreshing = false,
 }) => {
+  const dateRangeOrder: DateRangePreset[] = ["24h", "7d", "30d"];
+  const dateRangeLabel: Record<DateRangePreset, string> = {
+    "24h": "Last 24h",
+    "7d": "Last 7 days",
+    "30d": "Last 30 days",
+  };
+
+  const cycleDateRange = () => {
+    const currentIndex = dateRangeOrder.indexOf(dateRange);
+    const next = dateRangeOrder[(currentIndex + 1) % dateRangeOrder.length];
+    onDateRangeChange(next);
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 12 }}
@@ -78,21 +108,26 @@ const HeatmapControls: React.FC<HeatmapControlsProps> = ({
 
       {/* Right: Filters */}
       <div className="flex flex-wrap items-center gap-2">
-        <button className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground bg-white border border-gray-200 rounded-lg px-3 py-2 hover:border-gray-300 hover:text-foreground transition">
+        <button
+          onClick={cycleDateRange}
+          className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground bg-white border border-gray-200 rounded-lg px-3 py-2 hover:border-gray-300 hover:text-foreground transition"
+          title="Change date range"
+        >
           <Calendar size={13} />
-          Last 7 days
+          {dateRangeLabel[dateRange]}
         </button>
 
         <div className="flex items-center bg-white border border-gray-200 rounded-lg overflow-hidden">
           {[
-            { icon: <Monitor size={13} />, label: "Desktop" },
-            { icon: <Tablet size={13} />, label: "Tablet" },
-            { icon: <Smartphone size={13} />, label: "Mobile" },
-          ].map((d, i) => (
+            { icon: <Monitor size={13} />, label: "Desktop", value: "desktop" as DeviceType },
+            { icon: <Tablet size={13} />, label: "Tablet", value: "tablet" as DeviceType },
+            { icon: <Smartphone size={13} />, label: "Mobile", value: "mobile" as DeviceType },
+          ].map((d) => (
             <button
               key={d.label}
+              onClick={() => onDeviceTypeChange(d.value)}
               className={`flex items-center gap-1 px-2.5 py-2 text-xs font-medium transition ${
-                i === 0
+                deviceType === d.value
                   ? "bg-primary/5 text-primary border-r border-gray-200"
                   : "text-muted-foreground hover:text-foreground border-r border-gray-200 last:border-r-0"
               }`}
@@ -104,13 +139,20 @@ const HeatmapControls: React.FC<HeatmapControlsProps> = ({
           ))}
         </div>
 
-        <button className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground bg-white border border-gray-200 rounded-lg px-3 py-2 hover:border-gray-300 hover:text-foreground transition">
+        <button
+          onClick={onExport}
+          className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground bg-white border border-gray-200 rounded-lg px-3 py-2 hover:border-gray-300 hover:text-foreground transition"
+        >
           <Download size={13} />
           Export
         </button>
 
-        <button className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground bg-white border border-gray-200 rounded-lg px-2.5 py-2 hover:border-gray-300 hover:text-foreground transition">
-          <RefreshCw size={13} />
+        <button
+          onClick={onRefresh}
+          className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground bg-white border border-gray-200 rounded-lg px-2.5 py-2 hover:border-gray-300 hover:text-foreground transition"
+          title="Refresh data"
+        >
+          <RefreshCw size={13} className={isRefreshing ? "animate-spin" : ""} />
         </button>
       </div>
     </motion.div>

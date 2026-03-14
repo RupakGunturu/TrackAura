@@ -1,24 +1,41 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
-import { CheckCircle2, AlertTriangle, XCircle, ArrowUpRight, Shield } from "lucide-react";
+import { CheckCircle2, AlertTriangle, XCircle } from "lucide-react";
 import { FilterBar } from "@/components/FilterBar";
 import { SkeletonCard, SkeletonKpiCard } from "@/components/SkeletonCard";
-import { apiMetrics, responseTimeSeries, errorRateSeries } from "@/lib/mockData";
 import { cn } from "@/lib/utils";
+import {
+  getDateRangeBounds,
+  getProjectLabel,
+  normalizeProjectIds,
+  type DashboardDateRange,
+  type DashboardDevice,
+  type DashboardFilters,
+  type DashboardUserType,
+} from "@/lib/dashboardFilters";
+import { fetchPerformanceAnalytics } from "@/lib/analyticsApi";
+import { useActiveProjectIds } from "@/hooks/useActiveProjectIds";
 
 type StatusType = "ok" | "warning" | "critical";
 
 function StatusBadge({ status }: { status: StatusType }) {
-  if (status === "ok") return (
-    <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-primary bg-accent rounded-full px-2.5 py-1">
-      <CheckCircle2 className="h-3 w-3" /> Healthy
-    </span>
-  );
-  if (status === "warning") return (
-    <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-warning bg-warning/10 border border-warning/20 rounded-full px-2.5 py-1">
-      <AlertTriangle className="h-3 w-3" /> Warning
-    </span>
-  );
+  if (status === "ok") {
+    return (
+      <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-primary bg-accent rounded-full px-2.5 py-1">
+        <CheckCircle2 className="h-3 w-3" /> Healthy
+      </span>
+    );
+  }
+
+  if (status === "warning") {
+    return (
+      <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-warning bg-warning/10 border border-warning/20 rounded-full px-2.5 py-1">
+        <AlertTriangle className="h-3 w-3" /> Warning
+      </span>
+    );
+  }
+
   return (
     <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-destructive bg-destructive/10 border border-destructive/20 rounded-full px-2.5 py-1">
       <XCircle className="h-3 w-3" /> Critical
@@ -27,47 +44,110 @@ function StatusBadge({ status }: { status: StatusType }) {
 }
 
 export default function PerformancePage() {
-  const [loading, setLoading] = useState(true);
+  const fallbackProjectIds = import.meta.env.VITE_PROJECT_ID || "demo-project";
+  const { activeProjectIds, setActiveProjectIds } = useActiveProjectIds(fallbackProjectIds);
 
-  useEffect(() => {
-    const t = setTimeout(() => setLoading(false), 800);
-    return () => clearTimeout(t);
-  }, []);
+  const [filters, setFilters] = useState<DashboardFilters>({
+    dateRange: "Last 30 days",
+    device: "All Devices",
+    userType: "All Users",
+    projectIds: activeProjectIds,
+  });
+
+  const { start, end } = getDateRangeBounds(filters.dateRange);
+  const normalizedProjectIds = normalizeProjectIds(activeProjectIds || fallbackProjectIds);
+
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: ["analytics", "performance", normalizedProjectIds, start, end, filters.device, filters.userType],
+    queryFn: () =>
+      fetchPerformanceAnalytics({
+        projectIds: normalizedProjectIds,
+        start,
+        end,
+        device: filters.device,
+        userType: filters.userType,
+      }),
+  });
+
+  const metrics = data?.apiMetrics;
+  const projectLabel = getProjectLabel(normalizedProjectIds);
 
   const healthCards = [
-    { title: "Avg API Response", value: `${apiMetrics.avgResponseMs}ms`, status: apiMetrics.avgResponseMs < 200 ? "ok" : apiMetrics.avgResponseMs < 500 ? "warning" : "critical", sub: "p50 latency", pct: (apiMetrics.avgResponseMs / 1000) * 100 },
-    { title: "Error Rate", value: `${apiMetrics.errorRate}%`, status: apiMetrics.errorRate < 1 ? "ok" : apiMetrics.errorRate < 3 ? "warning" : "critical", sub: "of all requests", pct: apiMetrics.errorRate * 10 },
-    { title: "Failed Requests", value: apiMetrics.failedRequests.toLocaleString(), status: apiMetrics.failedRequests < 500 ? "ok" : "warning", sub: "last 24 hours", pct: (apiMetrics.failedRequests / 2000) * 100 },
-    { title: "Slow Endpoints", value: apiMetrics.slowEndpoints.filter(e => e.status !== "ok").length.toString(), status: "warning" as StatusType, sub: "need attention", pct: (apiMetrics.slowEndpoints.filter(e => e.status !== "ok").length / apiMetrics.slowEndpoints.length) * 100 },
-  ];
+    {
+      title: "Avg API Response",
+      value: `${metrics?.avgResponseMs ?? 0}ms`,
+      status: (metrics?.avgResponseMs ?? 0) < 200 ? "ok" : (metrics?.avgResponseMs ?? 0) < 500 ? "warning" : "critical",
+      sub: "p50 latency",
+      pct: ((metrics?.avgResponseMs ?? 0) / 1000) * 100,
+    },
+    {
+      title: "Error Rate",
+      value: `${metrics?.errorRate ?? 0}%`,
+      status: (metrics?.errorRate ?? 0) < 1 ? "ok" : (metrics?.errorRate ?? 0) < 3 ? "warning" : "critical",
+      sub: "of all requests",
+      pct: (metrics?.errorRate ?? 0) * 10,
+    },
+    {
+      title: "Failed Requests",
+      value: (metrics?.failedRequests ?? 0).toLocaleString(),
+      status: (metrics?.failedRequests ?? 0) < 500 ? "ok" : "warning",
+      sub: "selected range",
+      pct: ((metrics?.failedRequests ?? 0) / 2000) * 100,
+    },
+    {
+      title: "Slow Endpoints",
+      value: ((metrics?.slowEndpoints ?? []).filter((e) => e.status !== "ok").length).toString(),
+      status: "warning",
+      sub: "need attention",
+      pct: ((metrics?.slowEndpoints ?? []).filter((e) => e.status !== "ok").length / Math.max(1, (metrics?.slowEndpoints ?? []).length)) * 100,
+    },
+  ] as const;
+
+  const handleExport = () => {
+    if (!data) return;
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `performance-${normalizedProjectIds.replace(/[^a-z0-9,-]/gi, "_")}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   return (
     <div className="space-y-6">
-      <div className="animate-fade-in-up stagger-1">
-        <FilterBar title="Performance" subtitle="System health and API monitoring" />
-      </div>
+      <FilterBar
+        title="Performance"
+        subtitle={`System health from real event analytics · ${projectLabel}`}
+        dateRange={filters.dateRange}
+        device={filters.device}
+        userType={filters.userType}
+        projectIds={activeProjectIds}
+        onDateRangeChange={(value: DashboardDateRange) => setFilters((prev) => ({ ...prev, dateRange: value }))}
+        onDeviceChange={(value: DashboardDevice) => setFilters((prev) => ({ ...prev, device: value }))}
+        onUserTypeChange={(value: DashboardUserType) => setFilters((prev) => ({ ...prev, userType: value }))}
+        onProjectIdsChange={setActiveProjectIds}
+        onRefresh={() => refetch()}
+        onExport={handleExport}
+      />
 
-      {/* Health cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {loading
+        {isLoading
           ? Array.from({ length: 4 }).map((_, i) => <SkeletonKpiCard key={i} />)
-          : healthCards.map((card, i) => (
-              <div
-                key={card.title}
-                className={cn("animate-fade-in-up group rounded-2xl border border-border bg-card p-5 shadow-card hover:shadow-elevated hover:border-primary/20 transition-all duration-300", `stagger-${i + 1}`)}
-              >
+          : healthCards.map((card) => (
+              <div key={card.title} className="rounded-2xl border border-border bg-card p-5 shadow-card">
                 <div className="flex items-center justify-between mb-4">
-                  <span className="text-xs font-medium text-muted-foreground tracking-wide">{card.title}</span>
+                  <span className="text-xs font-medium text-muted-foreground">{card.title}</span>
                   <StatusBadge status={card.status as StatusType} />
                 </div>
-                <div className="text-3xl font-bold text-foreground tracking-tight mb-3">{card.value}</div>
+                <div className="text-3xl font-bold mb-3">{card.value}</div>
                 <div className="h-2 rounded-full bg-muted overflow-hidden mb-2">
                   <div
                     className={cn(
-                      "h-full rounded-full transition-all duration-700",
+                      "h-full rounded-full",
                       card.status === "ok" && "bg-primary",
                       card.status === "warning" && "bg-warning",
-                      card.status === "critical" && "bg-destructive",
+                      card.status === "critical" && "bg-destructive"
                     )}
                     style={{ width: `${Math.min(100, card.pct)}%` }}
                   />
@@ -77,28 +157,19 @@ export default function PerformancePage() {
             ))}
       </div>
 
-      {/* Charts */}
-      {loading ? (
+      {isLoading ? (
         <div className="grid lg:grid-cols-2 gap-4">
           <SkeletonCard lines={6} />
           <SkeletonCard lines={6} />
         </div>
       ) : (
         <div className="grid lg:grid-cols-2 gap-4">
-          <div className="animate-fade-in-up stagger-3 rounded-2xl border border-border bg-card p-6 shadow-card">
-            <div className="flex items-center justify-between mb-5">
-              <div>
-                <h3 className="text-base font-semibold text-foreground">API Response Time</h3>
-                <p className="text-xs text-muted-foreground mt-0.5">24h avg latency (ms)</p>
-              </div>
-              <div className="flex items-center gap-1.5 text-xs text-primary font-medium cursor-pointer hover:underline">
-                Details <ArrowUpRight className="h-3 w-3" />
-              </div>
-            </div>
+          <div className="rounded-2xl border border-border bg-card p-6 shadow-card">
+            <h3 className="text-base font-semibold mb-4">API Response Time</h3>
             <ResponsiveContainer width="100%" height={200}>
-              <AreaChart data={responseTimeSeries} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+              <AreaChart data={data?.responseTimeSeries ?? []} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
                 <defs>
-                  <linearGradient id="gResp" x1="0" y1="0" x2="0" y2="1">
+                  <linearGradient id="gRespLive" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="hsl(158,64%,35%)" stopOpacity={0.2} />
                     <stop offset="95%" stopColor="hsl(158,64%,35%)" stopOpacity={0} />
                   </linearGradient>
@@ -106,31 +177,20 @@ export default function PerformancePage() {
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
                 <XAxis dataKey="time" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} tickLine={false} axisLine={false} />
                 <YAxis tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} tickLine={false} axisLine={false} />
-                <Tooltip
-                  contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 12, fontSize: 12, boxShadow: "var(--shadow-elevated)" }}
-                  formatter={(v: number) => [`${v}ms`, "Avg Response"]}
-                />
-                <Area type="monotone" dataKey="ms" stroke="hsl(158,64%,35%)" strokeWidth={2} fill="url(#gResp)" />
+                <Tooltip formatter={(v: number) => [`${v}ms`, "Avg Response"]} />
+                <Area type="monotone" dataKey="ms" stroke="hsl(158,64%,35%)" strokeWidth={2} fill="url(#gRespLive)" />
               </AreaChart>
             </ResponsiveContainer>
           </div>
 
-          <div className="animate-fade-in-up stagger-4 rounded-2xl border border-border bg-card p-6 shadow-card">
-            <div className="flex items-center justify-between mb-5">
-              <div>
-                <h3 className="text-base font-semibold text-foreground">Error Rate</h3>
-                <p className="text-xs text-muted-foreground mt-0.5">24h error % (target &lt; 1%)</p>
-              </div>
-            </div>
+          <div className="rounded-2xl border border-border bg-card p-6 shadow-card">
+            <h3 className="text-base font-semibold mb-4">Error Rate</h3>
             <ResponsiveContainer width="100%" height={200}>
-              <BarChart data={errorRateSeries} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+              <BarChart data={data?.errorRateSeries ?? []} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
                 <XAxis dataKey="time" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} tickLine={false} axisLine={false} />
                 <YAxis tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} tickLine={false} axisLine={false} />
-                <Tooltip
-                  contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 12, fontSize: 12, boxShadow: "var(--shadow-elevated)" }}
-                  formatter={(v: number) => [`${v}%`, "Error Rate"]}
-                />
+                <Tooltip formatter={(v: number) => [`${v}%`, "Error Rate"]} />
                 <Bar dataKey="rate" fill="hsl(0,84%,60%)" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
@@ -138,44 +198,17 @@ export default function PerformancePage() {
         </div>
       )}
 
-      {/* Slow endpoints */}
-      {!loading && (
-        <div className="animate-fade-in-up stagger-5 rounded-2xl border border-border bg-card shadow-card overflow-hidden">
-          <div className="px-6 py-5 border-b border-border flex items-center gap-2">
-            <Shield className="h-4 w-4 text-primary" />
-            <div>
-              <h3 className="text-base font-semibold text-foreground">Endpoint P99 Latency</h3>
-              <p className="text-xs text-muted-foreground">Slowest endpoints by 99th percentile response time</p>
-            </div>
+      {!isLoading && (
+        <div className="rounded-2xl border border-border bg-card shadow-card overflow-hidden">
+          <div className="px-6 py-4 border-b border-border">
+            <h3 className="text-base font-semibold">Endpoint P99 Latency</h3>
           </div>
           <div className="divide-y divide-border">
-            {apiMetrics.slowEndpoints.map((ep) => (
-              <div key={ep.path} className="flex items-center gap-4 px-6 py-4 hover:bg-muted/20 transition-colors">
-                <StatusBadge status={ep.status as StatusType} />
-                <span className="text-sm font-mono text-foreground flex-1 truncate">{ep.path}</span>
-                <div className="flex items-center gap-3 shrink-0">
-                  <div className="w-28 h-2 rounded-full bg-muted overflow-hidden">
-                    <div
-                      className={cn(
-                        "h-full rounded-full",
-                        ep.status === "ok" && "bg-primary",
-                        ep.status === "warning" && "bg-warning",
-                        ep.status === "critical" && "bg-destructive",
-                      )}
-                      style={{ width: `${Math.min(100, (ep.p99 / 3000) * 100)}%` }}
-                    />
-                  </div>
-                  <span
-                    className={cn(
-                      "text-sm font-mono font-bold w-16 text-right",
-                      ep.status === "ok" && "text-primary",
-                      ep.status === "warning" && "text-warning",
-                      ep.status === "critical" && "text-destructive",
-                    )}
-                  >
-                    {ep.p99}ms
-                  </span>
-                </div>
+            {(metrics?.slowEndpoints ?? []).map((endpoint) => (
+              <div key={endpoint.path} className="flex items-center gap-4 px-6 py-4">
+                <StatusBadge status={endpoint.status} />
+                <span className="text-sm font-mono flex-1 truncate">{endpoint.path}</span>
+                <span className="text-sm font-mono font-semibold">{endpoint.p99}ms</span>
               </div>
             ))}
           </div>

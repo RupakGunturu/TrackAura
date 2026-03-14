@@ -8,6 +8,7 @@ import {
   MousePointerClick,
   Play,
   Flame,
+  FolderKanban,
   ChevronRight,
   Settings,
   LogOut,
@@ -42,6 +43,7 @@ const navItems = [
   { title: "Retention", url: "/retention", icon: Users },
   { title: "Performance", url: "/performance", icon: Activity },
   { title: "Heatmaps", url: "/dashboard/heatmaps", icon: Flame },
+  { title: "Projects", url: "/dashboard/projects", icon: FolderKanban },
 ];
 
 export function AppSidebar() {
@@ -146,6 +148,12 @@ export function AppSidebar() {
               <a href="/dashboard/team">
                 <Users className="h-4 w-4" />
                 Team Management
+              </a>
+            </DropdownMenuItem>
+            <DropdownMenuItem className="gap-2" asChild>
+              <a href="/dashboard/projects">
+                <FolderKanban className="h-4 w-4" />
+                Projects
               </a>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
