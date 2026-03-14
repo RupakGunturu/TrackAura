@@ -19,11 +19,11 @@ function getDeviceType(): "desktop" | "tablet" | "mobile" {
 
 function getSessionId() {
   const key = "trackaura-session-id";
-  const existing = sessionStorage.getItem(key);
+  const existing = localStorage.getItem(key);
   if (existing) return existing;
 
   const generated = crypto.randomUUID();
-  sessionStorage.setItem(key, generated);
+  localStorage.setItem(key, generated);
   return generated;
 }
 

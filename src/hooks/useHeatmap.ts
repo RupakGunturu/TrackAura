@@ -56,14 +56,16 @@ function renderHeatmap(
 ) {
   const width = canvas.width;
   const height = canvas.height;
-  if (width === 0 || height === 0 || data.length === 0) return;
+  if (width === 0 || height === 0) return;
 
   const ctx = canvas.getContext("2d", { willReadFrequently: true });
   if (!ctx) return;
 
-  // ── Step 1: Draw alpha (intensity) circles ──
+  // Always clear first so stale heatmap pixels never linger.
   ctx.clearRect(0, 0, width, height);
+  if (data.length === 0) return;
 
+  // ── Step 1: Draw alpha (intensity) circles ──
   const maxVal = Math.max(...data.map((d) => d.value));
   if (maxVal === 0) return;
 

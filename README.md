@@ -6,6 +6,21 @@
 
 ## How can I edit this code?
 
+## Local Bootstrap (Frontend + Backend + Tracker)
+
+From repo root:
+
+```sh
+npm run bootstrap:local
+```
+
+Then start frontend and backend in separate terminals:
+
+```sh
+npm run dev
+npm run dev:backend
+```
+
 There are several ways of editing your application.
 
 **Use Lovable**

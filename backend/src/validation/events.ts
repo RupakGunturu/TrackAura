@@ -22,7 +22,7 @@ export const eventsBatchSchema = z.object({
 
 export const heatmapQuerySchema = z.object({
   projectId: z.string().min(1),
-  pagePath: z.string().min(1),
+  pagePath: z.string().min(1).optional(),
   mode: heatmapModeSchema,
   start: z.string().datetime().optional(),
   end: z.string().datetime().optional(),

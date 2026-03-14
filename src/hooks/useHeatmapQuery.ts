@@ -4,7 +4,7 @@ import { fetchHeatmapData } from "@/lib/heatmapApi";
 
 interface UseHeatmapQueryInput {
   projectId: string;
-  pagePath: string;
+  pagePath?: string;
   mode: HeatmapMode;
   deviceType?: "desktop" | "tablet" | "mobile";
   start?: string;

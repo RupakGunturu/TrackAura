@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { CheckCircle2, AlertTriangle, XCircle } from "lucide-react";
@@ -44,7 +44,7 @@ function StatusBadge({ status }: { status: StatusType }) {
 }
 
 export default function PerformancePage() {
-  const fallbackProjectIds = import.meta.env.VITE_PROJECT_ID || "demo-project";
+  const fallbackProjectIds = "";
   const { activeProjectIds, setActiveProjectIds } = useActiveProjectIds(fallbackProjectIds);
 
   const [filters, setFilters] = useState<DashboardFilters>({
@@ -54,10 +54,11 @@ export default function PerformancePage() {
     projectIds: activeProjectIds,
   });
 
-  const { start, end } = getDateRangeBounds(filters.dateRange);
+  const { start, end } = useMemo(() => getDateRangeBounds(filters.dateRange), [filters.dateRange]);
   const normalizedProjectIds = normalizeProjectIds(activeProjectIds || fallbackProjectIds);
+  const hasProjectSelection = normalizedProjectIds.length > 0;
 
-  const { data, isLoading, refetch } = useQuery({
+  const { data, isPending, isError, error, refetch } = useQuery({
     queryKey: ["analytics", "performance", normalizedProjectIds, start, end, filters.device, filters.userType],
     queryFn: () =>
       fetchPerformanceAnalytics({
@@ -67,6 +68,8 @@ export default function PerformancePage() {
         device: filters.device,
         userType: filters.userType,
       }),
+    enabled: hasProjectSelection,
+    retry: 1,
   });
 
   const metrics = data?.apiMetrics;
@@ -131,10 +134,17 @@ export default function PerformancePage() {
         onExport={handleExport}
       />
 
+      {!hasProjectSelection && (
+        <div className="rounded-2xl border border-dashed border-gray-300 bg-white p-6">
+          <h3 className="text-base font-semibold text-gray-900">No project selected</h3>
+          <p className="mt-2 text-sm text-gray-600">Select an integrated project to show performance blocks and endpoint metrics.</p>
+        </div>
+      )}
+
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {isLoading
+        {hasProjectSelection && isPending && !data
           ? Array.from({ length: 4 }).map((_, i) => <SkeletonKpiCard key={i} />)
-          : healthCards.map((card) => (
+          : hasProjectSelection && healthCards.map((card) => (
               <div key={card.title} className="rounded-2xl border border-border bg-card p-5 shadow-card">
                 <div className="flex items-center justify-between mb-4">
                   <span className="text-xs font-medium text-muted-foreground">{card.title}</span>
@@ -157,12 +167,23 @@ export default function PerformancePage() {
             ))}
       </div>
 
-      {isLoading ? (
+      {hasProjectSelection && isPending && !data ? (
         <div className="grid lg:grid-cols-2 gap-4">
           <SkeletonCard lines={6} />
           <SkeletonCard lines={6} />
         </div>
-      ) : (
+      ) : hasProjectSelection && isError ? (
+        <div className="rounded-2xl border border-red-200 bg-red-50 p-6 text-red-700">
+          <div className="text-sm font-semibold">Unable to load performance analytics</div>
+          <div className="mt-1 text-xs">{error instanceof Error ? error.message : "Request failed"}</div>
+          <button
+            onClick={() => refetch()}
+            className="mt-4 rounded-md bg-red-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-700"
+          >
+            Retry
+          </button>
+        </div>
+      ) : hasProjectSelection ? (
         <div className="grid lg:grid-cols-2 gap-4">
           <div className="rounded-2xl border border-border bg-card p-6 shadow-card">
             <h3 className="text-base font-semibold mb-4">API Response Time</h3>
@@ -196,14 +217,17 @@ export default function PerformancePage() {
             </ResponsiveContainer>
           </div>
         </div>
-      )}
+      ) : null}
 
-      {!isLoading && (
+      {hasProjectSelection && !isPending && !isError && (
         <div className="rounded-2xl border border-border bg-card shadow-card overflow-hidden">
           <div className="px-6 py-4 border-b border-border">
             <h3 className="text-base font-semibold">Endpoint P99 Latency</h3>
           </div>
           <div className="divide-y divide-border">
+            {(metrics?.slowEndpoints ?? []).length === 0 && (
+              <div className="px-6 py-4 text-sm text-muted-foreground">No endpoint latency data available for current filters.</div>
+            )}
             {(metrics?.slowEndpoints ?? []).map((endpoint) => (
               <div key={endpoint.path} className="flex items-center gap-4 px-6 py-4">
                 <StatusBadge status={endpoint.status} />

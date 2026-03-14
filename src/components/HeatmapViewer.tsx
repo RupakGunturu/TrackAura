@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useCallback } from "react";
+import React, { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useHeatmap } from "@/hooks/useHeatmap";
 import {
@@ -14,6 +14,12 @@ interface HeatmapViewerProps {
   mode: HeatmapMode;
   loading?: boolean;
   liveData?: LiveHeatmapPoint[];
+  viewport?: {
+    width: number;
+    height: number;
+  } | null;
+  previewUrl?: string | null;
+  previewTitle?: string;
 }
 
 /* ─── Main Viewer ─── */
@@ -21,12 +27,46 @@ const HeatmapViewer: React.FC<HeatmapViewerProps> = ({
   mode,
   loading = false,
   liveData,
+  viewport,
+  previewUrl,
+  previewTitle,
 }) => {
   const wrapperRef = useRef<HTMLDivElement>(null);
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
   const [scaledData, setScaledData] = useState<HeatmapPoint[]>([]);
   const [zoom, setZoom] = useState(1);
   const [isFullscreen, setIsFullscreen] = useState(false);
+
+  const stage = useMemo(() => {
+    const containerW = dimensions.width;
+    const containerH = dimensions.height;
+    if (containerW <= 0 || containerH <= 0) {
+      return { width: 0, height: 0, left: 0, top: 0 };
+    }
+
+    const sourceW = viewport?.width ?? 1366;
+    const sourceH = viewport?.height ?? 768;
+    const sourceRatio = sourceW / sourceH;
+    const containerRatio = containerW / containerH;
+
+    let width = containerW;
+    let height = containerH;
+
+    if (containerRatio > sourceRatio) {
+      height = containerH;
+      width = Math.round(height * sourceRatio);
+    } else {
+      width = containerW;
+      height = Math.round(width / sourceRatio);
+    }
+
+    return {
+      width,
+      height,
+      left: Math.round((containerW - width) / 2),
+      top: Math.round((containerH - height) / 2),
+    };
+  }, [dimensions, viewport]);
 
   // ── Measure container ──
   const measure = useCallback(() => {
@@ -48,20 +88,21 @@ const HeatmapViewer: React.FC<HeatmapViewerProps> = ({
 
   // ── Scale data when dimensions or mode change ──
   useEffect(() => {
-    if (dimensions.width > 0 && dimensions.height > 0) {
-      if (liveData && liveData.length > 0) {
+    if (stage.width > 0 && stage.height > 0) {
+      // When liveData is provided (even empty), never fall back to mock points.
+      if (Array.isArray(liveData)) {
         const mapped = liveData.map((point) => ({
-          x: Math.round(point.xRatio * dimensions.width),
-          y: Math.round(point.yRatio * dimensions.height),
+          x: Math.round(point.xRatio * stage.width),
+          y: Math.round(point.yRatio * stage.height),
           value: point.value,
         }));
         setScaledData(mapped);
         return;
       }
 
-      setScaledData(getScaledData(mode, dimensions.width, dimensions.height));
+      setScaledData(getScaledData(mode, stage.width, stage.height));
     }
-  }, [mode, dimensions, liveData]);
+  }, [mode, stage, liveData]);
 
   const radiusMap: Record<HeatmapMode, number> = {
     click: 35,
@@ -136,7 +177,7 @@ const HeatmapViewer: React.FC<HeatmapViewerProps> = ({
           <span className="w-2.5 h-2.5 rounded-full bg-green-400" />
         </div>
         <div className="flex-1 bg-white rounded-md px-3 py-1 text-[11px] text-gray-400 border border-gray-200 font-mono truncate">
-          https://acme-inc.com/landing
+          {previewUrl || "Add website URL in Projects to preview your page"}
         </div>
       </div>
 
@@ -144,7 +185,7 @@ const HeatmapViewer: React.FC<HeatmapViewerProps> = ({
       <div
         ref={wrapperRef}
         className="relative overflow-auto"
-        style={{ height: isFullscreen ? "calc(100vh - 40px)" : 540 }}
+        style={{ height: isFullscreen ? "calc(100vh - 40px)" : 680 }}
       >
         <AnimatePresence mode="wait">
           {loading ? (
@@ -172,21 +213,31 @@ const HeatmapViewer: React.FC<HeatmapViewerProps> = ({
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.4 }}
-              className="origin-top-left"
+              className="origin-top-left relative w-full h-full min-h-full"
               style={{
                 transform: `scale(${zoom})`,
                 transformOrigin: "top left",
               }}
             >
-              {/* Website preview underneath */}
-              <WebpagePreview />
-
-              {/* Heatmap canvas overlay */}
               <div
-                ref={containerRef}
-                className="absolute inset-0 z-[5]"
-                style={{ pointerEvents: "none" }}
-              />
+                className="absolute bg-white rounded-md overflow-hidden"
+                style={{
+                  left: stage.left,
+                  top: stage.top,
+                  width: stage.width,
+                  height: stage.height,
+                }}
+              >
+                {/* Website preview underneath */}
+                <WebpagePreview previewUrl={previewUrl} previewTitle={previewTitle} />
+
+                {/* Heatmap canvas overlay */}
+                <div
+                  ref={containerRef}
+                  className="absolute inset-0 z-[5]"
+                  style={{ pointerEvents: "none" }}
+                />
+              </div>
             </motion.div>
           )}
         </AnimatePresence>

@@ -3,7 +3,16 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "workspaces": [
+    "backend",
+    "packages/*"
+  ],
   "scripts": {
+    "bootstrap:local": "npm install && npm --prefix backend install && npm --prefix packages/trackaura-tracker install && npm run tracker:link:global && npm run tracker:link:local",
+    "tracker:link:global": "npm --prefix packages/trackaura-tracker link",
+    "tracker:link:local": "npm link ./packages/trackaura-tracker",
+    "tracker:unlink:local": "npm unlink ./packages/trackaura-tracker",
+    "tracker:unlink:global": "npm --prefix packages/trackaura-tracker unlink",
     "dev": "vite",
     "dev:backend": "node ./backend/node_modules/tsx/dist/cli.mjs watch ./backend/src/server.ts",
     "dev:full": "node ./scripts/dev-full.mjs",

@@ -146,168 +146,175 @@ export function FilterBar({
   };
 
   return (
-    <div className="rounded-2xl border border-border bg-card p-4 sm:p-5 shadow-card">
-      {/* Title row */}
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-semibold text-foreground tracking-tight">{title}</h1>
-          {subtitle && <p className="text-sm text-muted-foreground mt-0.5">{subtitle}</p>}
-        </div>
+    <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+      {/* Header Section */}
+      <div className="mb-4 pb-4 border-b border-gray-100">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 tracking-tight">{title}</h1>
+            {subtitle && <p className="text-sm text-gray-600 mt-2">{subtitle}</p>}
+          </div>
 
-        {/* Export controls */}
-        <div className="flex items-center gap-2 shrink-0">
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-8 text-xs gap-1.5 hidden sm:flex"
-            onClick={() => handleExport("CSV")}
-          >
-            <FileText className="h-3.5 w-3.5" />
-            CSV
-          </Button>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="h-8 text-xs gap-1.5">
-                <Download className="h-3.5 w-3.5" />
-                Export
-                <ChevronDown className="h-3 w-3 opacity-60" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-40">
-              <DropdownMenuItem onClick={() => handleExport("CSV")}>
-                <FileText className="h-3.5 w-3.5 mr-2" />
-                Export CSV
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleExport("PDF")}>
-                <FileText className="h-3.5 w-3.5 mr-2" />
-                Export PDF
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleExport("Full Report")}>
-                <Download className="h-3.5 w-3.5 mr-2" />
-                Download Report
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          {/* Action Buttons */}
+          <div className="flex items-center gap-2 shrink-0">
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-9 text-sm gap-2 border-gray-300 text-gray-700 hover:bg-gray-50"
+              onClick={handleRefresh}
+              disabled={refreshing}
+            >
+              <RefreshCw className={cn("h-4 w-4", refreshing && "animate-spin")} />
+              <span className="hidden sm:inline">Refresh</span>
+            </Button>
+            
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="h-9 text-sm gap-2 border-gray-300 text-gray-700 hover:bg-gray-50"
+                >
+                  <Download className="h-4 w-4" />
+                  Export
+                  <ChevronDown className="h-3.5 w-3.5 opacity-60" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuItem onClick={() => handleExport("CSV")} className="gap-2">
+                  <FileText className="h-4 w-4" />
+                  Export CSV
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleExport("PDF")} className="gap-2">
+                  <FileText className="h-4 w-4" />
+                  Export PDF
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleExport("Full Report")} className="gap-2">
+                  <Download className="h-4 w-4" />
+                  Full Report
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
       </div>
 
-      <div className="mt-4 border-t border-border/70 pt-4 space-y-3">
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-xs font-medium text-muted-foreground">Project scope</span>
-
+      {/* Filters Row */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        {/* Projects Dropdown */}
+        <div className="md:col-span-1">
+          <label className="block text-xs font-semibold text-gray-700 mb-2">Project Scope</label>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="h-9 text-xs gap-1.5 min-w-[240px] justify-between rounded-lg">
-                <span className="inline-flex items-center gap-1.5 truncate text-left">
-                  <FolderKanban className="h-3.5 w-3.5 text-primary" />
-                  {projectLabel}
-                </span>
-                <ChevronDown className="h-3 w-3 opacity-50" />
+              <Button 
+                variant="outline" 
+                className="w-full h-9 text-xs justify-between rounded-lg border-gray-300 bg-white text-gray-900 hover:bg-gray-50"
+              >
+                <span className="truncate text-left flex-1">{projectLabel}</span>
+                <ChevronDown className="h-4 w-4 opacity-60 ml-1 shrink-0" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-[280px]">
+            <DropdownMenuContent align="start" className="w-64">
+              <div className="px-2 py-2 text-xs font-medium text-gray-700">
+                Select Projects
+              </div>
               {(projectsResp?.projects ?? []).map((project) => (
                 <DropdownMenuCheckboxItem
                   key={project.id}
                   checked={selectedSet.has(project.id)}
                   onCheckedChange={() => toggleProjectSelection(project.id)}
+                  className="text-xs text-gray-700"
                 >
-                  <div className="flex flex-col">
-                    <span className="text-sm font-medium">{project.name}</span>
-                    <span className="text-[11px] text-muted-foreground truncate">{project.id}</span>
-                  </div>
+                  {project.name}
                 </DropdownMenuCheckboxItem>
               ))}
-              {!(projectsResp?.projects ?? []).length && (
-                <div className="px-2 py-2 text-xs text-muted-foreground">No projects available yet.</div>
-              )}
             </DropdownMenuContent>
           </DropdownMenu>
-
-          <Button asChild variant="ghost" size="sm" className="h-9 text-xs text-muted-foreground hover:text-foreground">
-            <Link to="/dashboard/projects">Manage Projects</Link>
-          </Button>
         </div>
 
-        {/* Filter row */}
-        <div className="flex flex-wrap items-center gap-2">
-        {/* Date range */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="sm" className="h-9 text-xs gap-1.5">
-              <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
-              {currentDateRange}
-              <ChevronDown className="h-3 w-3 opacity-50" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="w-40">
-            {dateRanges.map((d) => (
-              <DropdownMenuItem
-                key={d}
-                onClick={() => updateDateRange(d)}
-                className={cn(currentDateRange === d && "text-primary font-medium")}
+        {/* Date Range Dropdown */}
+        <div className="md:col-span-1">
+          <label className="block text-xs font-semibold text-gray-700 mb-2">Period</label>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button 
+                variant="outline" 
+                className="w-full h-9 text-xs justify-between rounded-lg border-gray-300 bg-white text-gray-900 hover:bg-gray-50"
               >
-                {d}
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
+                <Calendar className="h-3.5 w-3.5 mr-1" />
+                <span className="truncate">{currentDateRange}</span>
+                <ChevronDown className="h-4 w-4 opacity-60 ml-1" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-48">
+              {dateRanges.map((range) => (
+                <DropdownMenuItem
+                  key={range}
+                  onClick={() => updateDateRange(range)}
+                  className={cn("text-xs cursor-pointer", currentDateRange === range && "bg-blue-50 text-blue-600")}
+                >
+                  {range}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
 
-        {/* Device */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="sm" className="h-9 text-xs gap-1.5">
-              <Monitor className="h-3.5 w-3.5 text-muted-foreground" />
-              {currentDevice}
-              <ChevronDown className="h-3 w-3 opacity-50" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="w-36">
-            {devices.map((d) => (
-              <DropdownMenuItem
-                key={d}
-                onClick={() => updateDevice(d)}
-                className={cn(currentDevice === d && "text-primary font-medium")}
+        {/* Device Filter */}
+        <div className="md:col-span-1">
+          <label className="block text-xs font-semibold text-gray-700 mb-2">Device</label>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button 
+                variant="outline" 
+                className="w-full h-9 text-xs justify-between rounded-lg border-gray-300 bg-white text-gray-900 hover:bg-gray-50"
               >
-                {d}
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
+                <Monitor className="h-3.5 w-3.5 mr-1" />
+                <span className="truncate">{currentDevice}</span>
+                <ChevronDown className="h-4 w-4 opacity-60 ml-1" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-48">
+              {devices.map((device) => (
+                <DropdownMenuItem
+                  key={device}
+                  onClick={() => updateDevice(device)}
+                  className={cn("text-xs cursor-pointer", currentDevice === device && "bg-blue-50 text-blue-600")}
+                >
+                  {device}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
 
-        {/* User type */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="sm" className="h-9 text-xs gap-1.5">
-              <User className="h-3.5 w-3.5 text-muted-foreground" />
-              {currentUserType}
-              <ChevronDown className="h-3 w-3 opacity-50" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="w-36">
-            {userTypes.map((u) => (
-              <DropdownMenuItem
-                key={u}
-                onClick={() => updateUserType(u)}
-                className={cn(currentUserType === u && "text-primary font-medium")}
+        {/* User Type Filter */}
+        <div className="md:col-span-1">
+          <label className="block text-xs font-semibold text-gray-700 mb-2">User Type</label>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button 
+                variant="outline" 
+                className="w-full h-9 text-xs justify-between rounded-lg border-gray-300 bg-white text-gray-900 hover:bg-gray-50"
               >
-                {u}
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
-
-        {/* Refresh */}
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-9 w-9 p-0 ml-auto"
-          onClick={handleRefresh}
-          title="Refresh data"
-        >
-          <RefreshCw className={cn("h-3.5 w-3.5 text-muted-foreground", refreshing && "animate-spin")} />
-        </Button>
-      </div>
+                <User className="h-3.5 w-3.5 mr-1" />
+                <span className="truncate">{currentUserType}</span>
+                <ChevronDown className="h-4 w-4 opacity-60 ml-1" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-48">
+              {userTypes.map((type) => (
+                <DropdownMenuItem
+                  key={type}
+                  onClick={() => updateUserType(type)}
+                  className={cn("text-xs cursor-pointer", currentUserType === type && "bg-blue-50 text-blue-600")}
+                >
+                  {type}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </div>
     </div>
   );

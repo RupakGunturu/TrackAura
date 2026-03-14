@@ -9,7 +9,7 @@ export interface LiveHeatmapPoint {
 
 export interface HeatmapQueryParams {
   projectId: string;
-  pagePath: string;
+  pagePath?: string;
   mode: HeatmapMode;
   start?: string;
   end?: string;
@@ -21,6 +21,10 @@ export interface HeatmapQueryResponse {
   mode: HeatmapMode;
   totalRows: number;
   points: LiveHeatmapPoint[];
+  viewport?: {
+    width: number;
+    height: number;
+  } | null;
 }
 
 export interface HeatEventPayload {

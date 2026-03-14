@@ -32,7 +32,7 @@ function getCellText(value: number | null): string {
 }
 
 export default function RetentionPage() {
-  const fallbackProjectIds = import.meta.env.VITE_PROJECT_ID || "demo-project";
+  const fallbackProjectIds = "";
   const { activeProjectIds, setActiveProjectIds } = useActiveProjectIds(fallbackProjectIds);
 
   const [filters, setFilters] = useState<DashboardFilters>({
@@ -42,10 +42,11 @@ export default function RetentionPage() {
     projectIds: activeProjectIds,
   });
 
-  const { start, end } = getDateRangeBounds(filters.dateRange);
+  const { start, end } = useMemo(() => getDateRangeBounds(filters.dateRange), [filters.dateRange]);
   const normalizedProjectIds = normalizeProjectIds(activeProjectIds || fallbackProjectIds);
+  const hasProjectSelection = normalizedProjectIds.length > 0;
 
-  const { data, isLoading, refetch } = useQuery({
+  const { data, isPending, isError, error, refetch } = useQuery({
     queryKey: ["analytics", "retention", normalizedProjectIds, start, end, filters.device, filters.userType],
     queryFn: () =>
       fetchRetentionAnalytics({
@@ -55,6 +56,8 @@ export default function RetentionPage() {
         device: filters.device,
         userType: filters.userType,
       }),
+    enabled: hasProjectSelection,
+    retry: 1,
   });
 
   const curveData = useMemo(() => {
@@ -97,9 +100,27 @@ export default function RetentionPage() {
         onExport={handleExport}
       />
 
-      {isLoading ? (
+      {!hasProjectSelection && (
+        <div className="rounded-2xl border border-dashed border-gray-300 bg-white p-6">
+          <h3 className="text-base font-semibold text-gray-900">No project selected</h3>
+          <p className="mt-2 text-sm text-gray-600">Select an integrated project to show retention blocks. Until then this section stays empty.</p>
+        </div>
+      )}
+
+      {hasProjectSelection && isPending && !data ? (
         <SkeletonCard lines={9} />
-      ) : (
+      ) : hasProjectSelection && isError ? (
+        <div className="rounded-2xl border border-red-200 bg-red-50 p-6 text-red-700">
+          <div className="text-sm font-semibold">Unable to load retention analytics</div>
+          <div className="mt-1 text-xs">{error instanceof Error ? error.message : "Request failed"}</div>
+          <button
+            onClick={() => refetch()}
+            className="mt-4 rounded-md bg-red-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-700"
+          >
+            Retry
+          </button>
+        </div>
+      ) : hasProjectSelection ? (
         <>
           <div className="rounded-2xl border border-border bg-card shadow-card p-6">
             <h3 className="text-base font-semibold mb-4">Average Retention Curve</h3>
@@ -121,6 +142,9 @@ export default function RetentionPage() {
           </div>
 
           <div className="rounded-2xl border border-border bg-card shadow-card overflow-x-auto">
+            {(data?.cohortData ?? []).length === 0 ? (
+              <div className="p-6 text-sm text-muted-foreground">No cohort data available for the selected filters.</div>
+            ) : (
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border bg-muted/30">
@@ -151,9 +175,10 @@ export default function RetentionPage() {
                 ))}
               </tbody>
             </table>
+            )}
           </div>
         </>
-      )}
+      ) : null}
     </div>
   );
 }

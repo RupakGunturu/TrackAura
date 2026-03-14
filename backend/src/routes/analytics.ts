@@ -51,13 +51,13 @@ function getTopPages(rows: EventRow[]) {
 }
 
 function makeRealtime(rows: EventRow[], from: Date, to: Date) {
-  const fiveMinAgo = new Date(to.getTime() - 5 * 60 * 1000);
-  const tenMinAgo = new Date(to.getTime() - 10 * 60 * 1000);
+  const oneMinAgo = new Date(to.getTime() - 60 * 1000);
+  const twoMinAgo = new Date(to.getTime() - 2 * 60 * 1000);
 
-  const currentRows = rows.filter((row) => new Date(row.created_at) >= fiveMinAgo);
+  const currentRows = rows.filter((row) => new Date(row.created_at) >= oneMinAgo);
   const previousRows = rows.filter((row) => {
     const ts = new Date(row.created_at);
-    return ts >= tenMinAgo && ts < fiveMinAgo;
+    return ts >= twoMinAgo && ts < oneMinAgo;
   });
 
   const onlineUsers = uniqueSessions(currentRows);
@@ -80,17 +80,18 @@ function makeRealtime(rows: EventRow[], from: Date, to: Date) {
   });
 
   const regionNames = ["North America", "Europe", "Asia-Pacific", "Rest of World"];
-  const regionBuckets = [0, 0, 0, 0];
+  const regionSessionSets = [new Set<string>(), new Set<string>(), new Set<string>(), new Set<string>()];
+
   for (const row of currentRows) {
     const index = Math.abs(row.session_id.split("").reduce((acc, ch) => acc + ch.charCodeAt(0), 0)) % 4;
-    regionBuckets[index] += 1;
+    regionSessionSets[index].add(row.session_id);
   }
 
-  const totalRegion = Math.max(1, regionBuckets.reduce((a, b) => a + b, 0));
-  const regions = regionBuckets.map((events, index) => ({
+  const totalRegion = Math.max(1, regionSessionSets.reduce((acc, set) => acc + set.size, 0));
+  const regions = regionSessionSets.map((sessionSet, index) => ({
     name: regionNames[index],
-    users: events,
-    pct: Math.round((events / totalRegion) * 100),
+    users: sessionSet.size,
+    pct: Math.round((sessionSet.size / totalRegion) * 100),
   }));
 
   return {
@@ -514,11 +515,21 @@ export const analyticsRouter = Router();
 async function fetchRows(reqQuery: unknown) {
   const parsed = analyticsQuerySchema.safeParse(reqQuery);
   if (!parsed.success) {
+    console.warn("[analytics] Invalid query params", parsed.error.flatten());
     throw new HttpError(400, "Invalid analytics query params");
   }
 
   const { projectIds, start, end, deviceType, userType, pagePath } = parsed.data;
   const projectList = parseProjectIds(projectIds);
+
+  console.log("[analytics] Query received", {
+    projectIds: projectList,
+    start: start ?? null,
+    end: end ?? null,
+    deviceType: deviceType ?? "ALL",
+    userType: userType ?? "ALL",
+    pagePath: pagePath ?? "ALL",
+  });
 
   if (!projectList.length) {
     throw new HttpError(400, "At least one project ID is required");
@@ -544,6 +555,14 @@ async function fetchRows(reqQuery: unknown) {
   const rows = ((data ?? []) as EventRow[]).filter((row) => {
     if (!userType) return true;
     return getSessionUserType(row.session_id) === userType;
+  });
+
+  console.log("[analytics] Query result", {
+    requestedProjects: projectList,
+    rawRows: (data ?? []).length,
+    filteredRows: rows.length,
+    from: from.toISOString(),
+    to: to.toISOString(),
   });
 
   return {

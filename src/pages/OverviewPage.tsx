@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   AreaChart,
@@ -44,7 +44,7 @@ export default function OverviewPage() {
     projectIds: activeProjectIds,
   });
 
-  const { start, end } = getDateRangeBounds(filters.dateRange);
+  const { start, end } = useMemo(() => getDateRangeBounds(filters.dateRange), [filters.dateRange]);
   const normalizedProjectIds = normalizeProjectIds(activeProjectIds || fallbackProjectIds);
 
   const { data, isLoading, refetch } = useQuery({
@@ -87,35 +87,35 @@ export default function OverviewPage() {
               const sparkData = card.trendSeries.map((v, j) => ({ v, j }));
 
               return (
-                <div key={card.title} className="rounded-2xl border border-border bg-card p-5 shadow-card">
+                <div key={card.title} className="bg-white rounded-lg border border-gray-200 p-5 shadow-sm hover:shadow-md transition-shadow">
                   <div className="flex items-center justify-between mb-3">
-                    <span className="text-xs font-medium text-muted-foreground">{card.title}</span>
-                    <div className="h-9 w-9 rounded-lg bg-accent flex items-center justify-center">
-                      <Icon className="h-4 w-4 text-primary" />
+                    <span className="text-xs font-semibold text-gray-700 uppercase tracking-wide">{card.title}</span>
+                    <div className="h-10 w-10 rounded-lg bg-green-50 flex items-center justify-center">
+                      <Icon className="h-5 w-5 text-green-600" />
                     </div>
                   </div>
-                  <div className="text-2xl font-semibold text-foreground">{card.value}</div>
-                  <div className="flex items-center gap-2 mt-2">
+                  <div className="text-3xl font-bold text-gray-900">{card.value}</div>
+                  <div className="flex items-center gap-2 mt-3">
                     <span
                       className={cn(
-                        "inline-flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-full",
-                        card.positive ? "text-primary bg-accent" : "text-destructive bg-destructive/10"
+                        "inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full",
+                        card.positive ? "text-emerald-700 bg-emerald-50" : "text-red-700 bg-red-50"
                       )}
                     >
                       {card.positive ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
                       {card.change}
                     </span>
-                    <span className="text-[11px] text-muted-foreground">{card.sub}</span>
+                    <span className="text-xs text-gray-600">{card.sub}</span>
                   </div>
-                  <div className="mt-3 h-12">
+                  <div className="mt-4 h-10">
                     <ResponsiveContainer width="100%" height="100%">
                       <AreaChart data={sparkData}>
                         <Area
                           type="monotone"
                           dataKey="v"
-                          stroke={card.positive ? "hsl(158,64%,35%)" : "hsl(0,84%,60%)"}
-                          strokeWidth={2}
-                          fill="hsl(158 64% 35% / 0.12)"
+                          stroke={card.positive ? "#10b981" : "#ef4444"}
+                          strokeWidth={1.5}
+                          fill="none"
                           dot={false}
                         />
                       </AreaChart>
@@ -134,30 +134,33 @@ export default function OverviewPage() {
           </>
         ) : (
           <>
-            <div className="lg:col-span-2 rounded-2xl border border-border bg-card p-6 shadow-card">
-              <h3 className="text-base font-semibold text-foreground mb-4">Daily Active Users</h3>
+            <div className="lg:col-span-2 bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-base font-semibold text-gray-900">Daily Active Users</h3>
+                <span className="text-xs text-gray-600">Last 30 days</span>
+              </div>
               <ResponsiveContainer width="100%" height={260}>
                 <AreaChart data={data?.dauSeries ?? []} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
                   <defs>
                     <linearGradient id="gOverviewUsers" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="hsl(158,64%,35%)" stopOpacity={0.25} />
-                      <stop offset="100%" stopColor="hsl(158,64%,35%)" stopOpacity={0.02} />
+                      <stop offset="0%" stopColor="#10b981" stopOpacity={0.15} />
+                      <stop offset="100%" stopColor="#10b981" stopOpacity={0.02} />
                     </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
-                  <XAxis dataKey="day" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} tickLine={false} axisLine={false} />
-                  <YAxis tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} tickLine={false} axisLine={false} />
-                  <Tooltip formatter={(v: number, key: string) => [v.toLocaleString(), key === "users" ? "Users" : "Sessions"]} />
-                  <Area type="monotone" dataKey="users" stroke="hsl(158,64%,35%)" strokeWidth={2.5} fill="url(#gOverviewUsers)" />
-                  <Area type="monotone" dataKey="sessions" stroke="hsl(152,76%,55%)" strokeWidth={2} fill="hsl(152 76% 55% / 0.06)" />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
+                  <XAxis dataKey="day" tick={{ fontSize: 10, fill: "#9ca3af" }} tickLine={false} axisLine={false} />
+                  <YAxis tick={{ fontSize: 10, fill: "#9ca3af" }} tickLine={false} axisLine={false} />
+                  <Tooltip formatter={(v: number, key: string) => [v.toLocaleString(), key === "users" ? "Users" : "Sessions"]} contentStyle={{ backgroundColor: "#ffffff", border: "1px solid #e5e7eb", borderRadius: "8px" }} />
+                  <Area type="monotone" dataKey="users" stroke="#10b981" strokeWidth={2.5} fill="url(#gOverviewUsers)" />
+                  <Area type="monotone" dataKey="sessions" stroke="#06b6d4" strokeWidth={2} fill="none" />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
 
             <div className="space-y-4">
-              <div className="rounded-2xl border border-border bg-card p-5 shadow-card">
-                <h3 className="text-sm font-semibold text-foreground mb-1">Traffic by Device</h3>
-                <p className="text-xs text-muted-foreground mb-3">Live distribution of tracked events</p>
+              <div className="bg-white rounded-lg border border-gray-200 p-5 shadow-sm">
+                <h3 className="text-sm font-semibold text-gray-900 mb-1">Traffic by Device</h3>
+                <p className="text-xs text-gray-600 mb-3">Distribution of tracked events</p>
                 <ResponsiveContainer width="100%" height={150}>
                   <PieChart>
                     <Pie data={data?.deviceData ?? []} cx="50%" cy="50%" innerRadius={40} outerRadius={65} paddingAngle={5} dataKey="value" strokeWidth={0}>
@@ -170,20 +173,20 @@ export default function OverviewPage() {
                 </ResponsiveContainer>
               </div>
 
-              <div className="rounded-2xl border border-border bg-card p-5 shadow-card">
-                <h3 className="text-sm font-semibold text-foreground">Conversion Rate</h3>
-                <div className="text-3xl font-semibold text-primary mt-2">{data?.conversionSummary.rate ?? 0}%</div>
+              <div className="bg-white rounded-lg border border-gray-200 p-5 shadow-sm">
+                <h3 className="text-sm font-semibold text-gray-900">Conversion Rate</h3>
+                <div className="text-3xl font-bold text-green-600 mt-2">{data?.conversionSummary.rate ?? 0}%</div>
                 <div className="flex items-center gap-1 mt-2 text-xs">
                   {(data?.conversionSummary.delta ?? 0) >= 0 ? (
-                    <TrendingUp className="h-3 w-3 text-primary" />
+                    <TrendingUp className="h-3 w-3 text-emerald-600" />
                   ) : (
-                    <TrendingDown className="h-3 w-3 text-destructive" />
+                    <TrendingDown className="h-3 w-3 text-red-600" />
                   )}
-                  <span className={(data?.conversionSummary.delta ?? 0) >= 0 ? "text-primary" : "text-destructive"}>
+                  <span className={(data?.conversionSummary.delta ?? 0) >= 0 ? "text-emerald-700 font-medium" : "text-red-700 font-medium"}>
                     {(data?.conversionSummary.delta ?? 0) >= 0 ? "+" : ""}
                     {data?.conversionSummary.delta ?? 0}%
                   </span>
-                  <span className="text-muted-foreground">vs baseline 10%</span>
+                  <span className="text-gray-600">vs baseline 10%</span>
                 </div>
               </div>
             </div>
@@ -193,21 +196,21 @@ export default function OverviewPage() {
 
       {!isLoading && (
         <div className="grid lg:grid-cols-2 gap-4">
-          <div className="rounded-2xl border border-border bg-card p-6 shadow-card">
-            <h3 className="text-base font-semibold text-foreground mb-4">Hourly Traffic</h3>
+          <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
+            <h3 className="text-base font-semibold text-gray-900 mb-4">Hourly Traffic</h3>
             <ResponsiveContainer width="100%" height={220}>
               <BarChart data={data?.hourlyTraffic ?? []} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
-                <XAxis dataKey="hour" tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }} tickLine={false} axisLine={false} interval={2} />
-                <YAxis tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} tickLine={false} axisLine={false} />
-                <Tooltip formatter={(v: number) => [v.toLocaleString(), "Users"]} />
-                <Bar dataKey="users" radius={[4, 4, 0, 0]} fill="hsl(158,64%,35%)" />
+                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
+                <XAxis dataKey="hour" tick={{ fontSize: 9, fill: "#9ca3af" }} tickLine={false} axisLine={false} interval={2} />
+                <YAxis tick={{ fontSize: 10, fill: "#9ca3af" }} tickLine={false} axisLine={false} />
+                <Tooltip formatter={(v: number) => [v.toLocaleString(), "Users"]} contentStyle={{ backgroundColor: "#ffffff", border: "1px solid #e5e7eb", borderRadius: "8px" }} />
+                <Bar dataKey="users" radius={[4, 4, 0, 0]} fill="#10b981" />
               </BarChart>
             </ResponsiveContainer>
           </div>
 
-          <div className="rounded-2xl border border-border bg-card p-6 shadow-card">
-            <h3 className="text-base font-semibold text-foreground mb-4">Top Pages</h3>
+          <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
+            <h3 className="text-base font-semibold text-gray-900 mb-4">Top Pages</h3>
             <div className="space-y-3">
               {(data?.topPages ?? []).map((page, i) => {
                 const top = data?.topPages?.[0]?.views ?? 1;
@@ -215,14 +218,14 @@ export default function OverviewPage() {
 
                 return (
                   <div key={page.path}>
-                    <div className="flex items-center justify-between mb-1.5">
-                      <span className="text-sm font-mono text-foreground truncate">{i + 1}. {page.path}</span>
-                      <span className="text-sm font-semibold">{page.views.toLocaleString()}</span>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm font-mono text-gray-900 truncate">{i + 1}. {page.path}</span>
+                      <span className="text-sm font-semibold text-gray-900">{page.views.toLocaleString()}</span>
                     </div>
-                    <div className="h-2 rounded-full bg-muted overflow-hidden">
-                      <div className="h-full bg-primary" style={{ width: `${pct}%` }} />
+                    <div className="h-2 rounded-full bg-gray-200 overflow-hidden">
+                      <div className="h-full bg-green-600" style={{ width: `${pct}%` }} />
                     </div>
-                    <div className="mt-1 text-[11px] text-muted-foreground">Bounce {page.bounce}</div>
+                    <div className="mt-1 text-xs text-gray-600">Bounce {page.bounce}</div>
                   </div>
                 );
               })}

@@ -15,17 +15,38 @@ import { FileQuestion } from "lucide-react";
 import { useHeatmapQuery } from "@/hooks/useHeatmapQuery";
 import { startHeatmapTracker } from "@/lib/tracker";
 import { useActiveProjectIds } from "@/hooks/useActiveProjectIds";
+import { useQuery } from "@tanstack/react-query";
+import { fetchProjects } from "@/lib/projectsApi";
 
 const HeatmapDashboard: React.FC = () => {
   const [mode, setMode] = useState<HeatmapMode>("click");
   const [dateRange, setDateRange] = useState<DateRangePreset>("7d");
   const [deviceType, setDeviceType] = useState<DeviceType>("desktop");
+  const [windowTick, setWindowTick] = useState(() => Date.now());
   const { activeProjectIds } = useActiveProjectIds(import.meta.env.VITE_PROJECT_ID || "demo-project");
   const projectId = activeProjectIds.split(",")[0] || "demo-project";
-  const pagePath = "/dashboard/heatmaps";
+  const trackerPagePath = typeof window !== "undefined" ? window.location.pathname : "/dashboard/heatmaps";
+  const pagePath = undefined;
+
+  const { data: projectsData } = useQuery({
+    queryKey: ["projects"],
+    queryFn: fetchProjects,
+  });
+
+  const selectedProject = useMemo(() => {
+    return (projectsData?.projects ?? []).find((project) => project.id === projectId) ?? null;
+  }, [projectsData?.projects, projectId]);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setWindowTick(Date.now());
+    }, 20_000);
+
+    return () => window.clearInterval(timer);
+  }, []);
 
   const { start, end } = useMemo(() => {
-    const now = new Date();
+    const now = new Date(windowTick);
     const from = new Date(now);
 
     if (dateRange === "24h") {
@@ -40,7 +61,7 @@ const HeatmapDashboard: React.FC = () => {
       start: from.toISOString(),
       end: now.toISOString(),
     };
-  }, [dateRange]);
+  }, [dateRange, windowTick]);
 
   const { data, isLoading, isFetching, refetch } = useHeatmapQuery({
     projectId,
@@ -87,21 +108,26 @@ const HeatmapDashboard: React.FC = () => {
   useEffect(() => {
     const stopTracker = startHeatmapTracker({
       projectId,
-      pagePath,
+      pagePath: trackerPagePath,
     });
 
     return () => stopTracker();
-  }, [projectId, pagePath]);
+  }, [projectId, trackerPagePath]);
 
   const handleModeChange = (newMode: HeatmapMode) => {
     setMode(newMode);
+  };
+
+  const handleRefresh = () => {
+    setWindowTick(Date.now());
+    void refetch();
   };
 
   const handleExport = () => {
     const payload = {
       exportedAt: new Date().toISOString(),
       projectId,
-      pagePath,
+      pagePath: trackerPagePath,
       mode,
       dateRange,
       deviceType,
@@ -140,7 +166,7 @@ const HeatmapDashboard: React.FC = () => {
           deviceType={deviceType}
           onDeviceTypeChange={setDeviceType}
           onExport={handleExport}
-          onRefresh={() => void refetch()}
+          onRefresh={handleRefresh}
           isRefreshing={isFetching}
         />
         <motion.div
@@ -159,7 +185,7 @@ const HeatmapDashboard: React.FC = () => {
             your website. Data will appear here once collected.
           </p>
           <button
-            onClick={() => void refetch()}
+            onClick={handleRefresh}
             className="mt-5 text-sm font-medium text-white bg-primary px-5 py-2.5 rounded-xl hover:bg-primary/90 transition shadow-sm"
           >
             Refresh Data
@@ -180,7 +206,7 @@ const HeatmapDashboard: React.FC = () => {
         deviceType={deviceType}
         onDeviceTypeChange={setDeviceType}
         onExport={handleExport}
-        onRefresh={() => void refetch()}
+        onRefresh={handleRefresh}
         isRefreshing={isFetching}
       />
 
@@ -196,7 +222,14 @@ const HeatmapDashboard: React.FC = () => {
               exit={{ opacity: 0 }}
               transition={{ duration: 0.3 }}
             >
-              <HeatmapViewer mode={mode} loading={false} liveData={data?.points ?? []} />
+              <HeatmapViewer
+                mode={mode}
+                loading={false}
+                liveData={data?.points ?? []}
+                viewport={data?.viewport ?? null}
+                previewUrl={selectedProject?.website_url ?? null}
+                previewTitle={selectedProject?.name ?? "Project"}
+              />
             </motion.div>
           </AnimatePresence>
         </div>

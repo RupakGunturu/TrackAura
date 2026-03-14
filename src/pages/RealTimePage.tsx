@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { useQuery } from "@tanstack/react-query";
 import { Globe, FileText } from "lucide-react";
@@ -17,7 +17,7 @@ import { fetchRealtimeAnalytics } from "@/lib/analyticsApi";
 import { useActiveProjectIds } from "@/hooks/useActiveProjectIds";
 
 export default function RealTimePage() {
-  const fallbackProjectIds = import.meta.env.VITE_PROJECT_ID || "demo-project";
+  const fallbackProjectIds = "";
   const { activeProjectIds, setActiveProjectIds } = useActiveProjectIds(fallbackProjectIds);
 
   const [filters, setFilters] = useState<DashboardFilters>({
@@ -27,10 +27,11 @@ export default function RealTimePage() {
     projectIds: activeProjectIds,
   });
   const normalizedProjectIds = normalizeProjectIds(activeProjectIds || fallbackProjectIds);
+  const hasProjectSelection = normalizedProjectIds.length > 0;
 
-  const { start, end } = getDateRangeBounds(filters.dateRange);
+  const { start, end } = useMemo(() => getDateRangeBounds(filters.dateRange), [filters.dateRange]);
 
-  const { data, isLoading, isFetching, refetch } = useQuery({
+  const { data, isPending, isFetching, isError, error, refetch } = useQuery({
     queryKey: ["analytics", "realtime", normalizedProjectIds, start, end, filters.device, filters.userType],
     queryFn: () =>
       fetchRealtimeAnalytics({
@@ -40,7 +41,9 @@ export default function RealTimePage() {
         device: filters.device,
         userType: filters.userType,
       }),
-    refetchInterval: 5000,
+    enabled: hasProjectSelection,
+    refetchInterval: hasProjectSelection ? 5000 : false,
+    retry: 1,
   });
 
   const projectLabel = getProjectLabel(normalizedProjectIds);
@@ -69,13 +72,38 @@ export default function RealTimePage() {
         onDeviceChange={(value: DashboardDevice) => setFilters((prev) => ({ ...prev, device: value }))}
         onUserTypeChange={(value: DashboardUserType) => setFilters((prev) => ({ ...prev, userType: value }))}
         onProjectIdsChange={setActiveProjectIds}
-        onRefresh={() => refetch()}
+        onRefresh={() => {
+          void refetch();
+        }}
         onExport={handleExport}
       />
 
-      {isLoading ? (
+      {!hasProjectSelection && (
+        <div className="rounded-2xl border border-dashed border-gray-300 bg-white p-6">
+          <h3 className="text-base font-semibold text-gray-900">No project selected</h3>
+          <p className="mt-2 text-sm text-gray-600">Create/select a project first, then integrate your website snippet to start real-time blocks.</p>
+          <ol className="mt-4 list-decimal pl-5 text-sm text-gray-700 space-y-1">
+            <li>Go to Projects in sidebar and create/select your project.</li>
+            <li>Send events to <span className="font-mono">POST /api/events/batch</span> with that project ID.</li>
+            <li>Return here and click Refresh.</li>
+          </ol>
+        </div>
+      )}
+
+      {hasProjectSelection && isPending && !data ? (
         <SkeletonCard lines={8} />
-      ) : (
+      ) : hasProjectSelection && isError ? (
+        <div className="rounded-2xl border border-red-200 bg-red-50 p-6 text-red-700">
+          <div className="text-sm font-semibold">Unable to load real-time analytics</div>
+          <div className="mt-1 text-xs">{error instanceof Error ? error.message : "Request failed"}</div>
+          <button
+            onClick={() => refetch()}
+            className="mt-4 rounded-md bg-red-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-700"
+          >
+            Retry
+          </button>
+        </div>
+      ) : hasProjectSelection ? (
         <>
           <div className="rounded-2xl border border-border bg-card shadow-card p-6">
             <div className="flex items-start justify-between gap-4">
@@ -144,7 +172,7 @@ export default function RealTimePage() {
             </div>
           </div>
         </>
-      )}
+      ) : null}
     </div>
   );
 }

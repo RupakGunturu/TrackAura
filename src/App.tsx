@@ -2,9 +2,8 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { DashboardLayout } from "@/components/DashboardLayout";
-import OverviewPage from "./pages/OverviewPage";
 import RealTimePage from "./pages/RealTimePage";
 import FunnelsPage from "./pages/FunnelsPage";
 import RetentionPage from "./pages/RetentionPage";
@@ -16,6 +15,8 @@ import ProjectsPage from "./pages/ProjectsPage";
 import LandingPage from "./pages/LandingPage";
 import HeatmapDashboard from "./components/HeatmapDashboard";
 import NotFound from "./pages/NotFound";
+import AuthPage from "./pages/AuthPage";
+import { AuthGuard } from "@/components/AuthGuard";
 
 const queryClient = new QueryClient();
 
@@ -27,8 +28,9 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<LandingPage />} />
-          <Route element={<DashboardLayout />}>
-            <Route path="/dashboard" element={<OverviewPage />} />
+          <Route path="/auth" element={<AuthPage />} />
+          <Route element={<AuthGuard><DashboardLayout /></AuthGuard>}>
+            <Route path="/dashboard" element={<Navigate to="/dashboard/projects" replace />} />
             <Route path="/dashboard/realtime" element={<RealTimePage />} />
             <Route path="/dashboard/funnels" element={<FunnelsPage />} />
             <Route path="/dashboard/retention" element={<RetentionPage />} />
@@ -38,12 +40,13 @@ const App = () => (
             <Route path="/dashboard/settings" element={<AccountSettingsPage />} />
             <Route path="/dashboard/team" element={<TeamManagementPage />} />
             <Route path="/dashboard/projects" element={<ProjectsPage />} />
-            <Route path="/" element={<OverviewPage />} />
+            <Route path="/overview" element={<Navigate to="/dashboard/projects" replace />} />
             <Route path="/realtime" element={<RealTimePage />} />
             <Route path="/funnels" element={<FunnelsPage />} />
             <Route path="/retention" element={<RetentionPage />} />
             <Route path="/performance" element={<PerformancePage />} />
             <Route path="/heatmap" element={<HeatmapDashboard />} />
+            <Route path="/sessions" element={<SessionReplayPage />} />
             <Route path="/projects" element={<ProjectsPage />} />
           </Route>
           <Route path="*" element={<NotFound />} />

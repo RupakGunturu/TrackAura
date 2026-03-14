@@ -17,6 +17,11 @@ interface AggregatedPoint {
   value: number;
 }
 
+interface RepresentativeViewport {
+  width: number;
+  height: number;
+}
+
 const BINS_X = 60;
 const BINS_Y = 45;
 
@@ -50,41 +55,87 @@ function aggregatePoints(rows: EventRow[]): AggregatedPoint[] {
   return points;
 }
 
+function getRepresentativeViewport(rows: EventRow[]): RepresentativeViewport | null {
+  const validRows = rows.filter((row) => row.viewport_w > 0 && row.viewport_h > 0);
+  if (!validRows.length) return null;
+
+  const avgW = Math.round(validRows.reduce((sum, row) => sum + row.viewport_w, 0) / validRows.length);
+  const avgH = Math.round(validRows.reduce((sum, row) => sum + row.viewport_h, 0) / validRows.length);
+
+  return {
+    width: Math.max(1, avgW),
+    height: Math.max(1, avgH),
+  };
+}
+
 export const heatmapRouter = Router();
 
 heatmapRouter.get("/heatmap", async (req, res, next) => {
   try {
     const parsed = heatmapQuerySchema.safeParse(req.query);
     if (!parsed.success) {
+      console.warn("[heatmap] Invalid query params", {
+        query: req.query,
+        issues: parsed.error.flatten(),
+      });
       throw new HttpError(400, "Invalid heatmap query params");
     }
 
     const { projectId, pagePath, mode, start, end, deviceType, limit } = parsed.data;
 
+    console.log("[heatmap] Query received", {
+      projectId,
+      pagePath: pagePath ?? "ALL",
+      mode,
+      start: start ?? null,
+      end: end ?? null,
+      deviceType: deviceType ?? "ALL",
+      limit,
+    });
+
     let query = supabaseAdmin
       .from("interaction_events")
       .select("x,y,value,viewport_w,viewport_h", { count: "exact" })
       .eq("project_id", projectId)
-      .eq("page_path", pagePath)
       .eq("event_type", mode)
       .order("created_at", { ascending: false })
       .limit(limit);
 
+    if (pagePath) query = query.eq("page_path", pagePath);
     if (start) query = query.gte("created_at", start);
     if (end) query = query.lte("created_at", end);
     if (deviceType) query = query.eq("device_type", deviceType);
 
     const { data, error, count } = await query;
     if (error) {
+      console.error("[heatmap] Supabase query failed", {
+        message: error.message,
+        code: error.code,
+        hint: error.hint,
+        projectId,
+        pagePath: pagePath ?? "ALL",
+        mode,
+      });
       throw new HttpError(500, error.message);
     }
 
-    const points = aggregatePoints((data ?? []) as EventRow[]);
+    const rows = (data ?? []) as EventRow[];
+    const points = aggregatePoints(rows);
+    const viewport = getRepresentativeViewport(rows);
+
+    console.log("[heatmap] Query result", {
+      projectId,
+      pagePath: pagePath ?? "ALL",
+      mode,
+      totalRows: count ?? 0,
+      points: points.length,
+    });
 
     res.json({
       mode,
       totalRows: count ?? 0,
       points,
+      viewport,
     });
   } catch (error) {
     next(error);

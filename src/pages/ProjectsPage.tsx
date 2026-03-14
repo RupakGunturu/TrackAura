@@ -1,6 +1,6 @@
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Copy, Plus, Trash2, Globe, FolderKanban, PencilLine, Save, X } from "lucide-react";
+import { Copy, Plus, Trash2, Globe, FolderKanban, PencilLine, Save, X, Download } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,6 +20,7 @@ export default function ProjectsPage() {
   const [editingProjectId, setEditingProjectId] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
   const [editWebsiteUrl, setEditWebsiteUrl] = useState("");
+  const [installProjectId, setInstallProjectId] = useState("");
 
   const { data, isLoading, refetch } = useQuery({
     queryKey: ["projects"],
@@ -125,7 +126,24 @@ export default function ProjectsPage() {
 
   const projects = data?.projects ?? [];
 
+  useEffect(() => {
+    if (!installProjectId && projects.length > 0) {
+      setInstallProjectId(projects[0].id);
+    }
+  }, [installProjectId, projects]);
+
   const activeSet = useMemo(() => new Set(selectedIds), [selectedIds]);
+
+  const selectedInstallProject = useMemo(() => {
+    return projects.find((project) => project.id === installProjectId) ?? projects[0];
+  }, [projects, installProjectId]);
+
+  const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:4000";
+
+  const copyText = (text: string, message: string) => {
+    navigator.clipboard.writeText(text);
+    toast({ title: message });
+  };
 
   const onCreate = (event: FormEvent) => {
     event.preventDefault();
@@ -169,174 +187,314 @@ export default function ProjectsPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <FilterBar
         title="Projects"
-        subtitle="Create projects, copy API keys, and switch active projects used across all dashboards"
+        subtitle="Manage projects, API keys, and control which projects power your analytics dashboards"
         onRefresh={async () => {
           await refetch();
         }}
       />
 
-      <form onSubmit={onCreate} className="rounded-2xl border border-border bg-card shadow-card p-5">
-        <div className="grid gap-3 md:grid-cols-[1fr_1fr_auto]">
-          <Input
-            placeholder="Project name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className="h-10"
-          />
-          <Input
-            placeholder="https://yourwebsite.com"
-            value={websiteUrl}
-            onChange={(e) => setWebsiteUrl(e.target.value)}
-            className="h-10"
-          />
-          <Button type="submit" className="h-10 gap-1.5" disabled={createMutation.isPending}>
+      {/* Create Project Form - Premium Card */}
+      <form onSubmit={onCreate} className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+        <h2 className="text-sm font-semibold text-gray-900 mb-4">Create New Project</h2>
+        <div className="grid gap-4 md:grid-cols-[1fr_1.2fr_auto]">
+          <div>
+            <label className="block text-xs font-medium text-gray-700 mb-1.5">Project Name *</label>
+            <Input
+              placeholder="e.g., My Website"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="h-10 border-gray-200 focus:border-blue-500 focus:ring-blue-500"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-700 mb-1.5">Website URL</label>
+            <Input
+              placeholder="https://yourwebsite.com"
+              value={websiteUrl}
+              onChange={(e) => setWebsiteUrl(e.target.value)}
+              className="h-10 border-gray-200 focus:border-blue-500 focus:ring-blue-500"
+            />
+          </div>
+          <Button type="submit" className="h-10 gap-2 mt-5 bg-green-600 hover:bg-green-700 text-white" disabled={createMutation.isPending}>
             <Plus className="h-4 w-4" />
-            {createMutation.isPending ? "Creating..." : "New Project"}
+            <span>{createMutation.isPending ? "Creating..." : "Create"}</span>
           </Button>
         </div>
       </form>
 
+      {/* Setup Warning - Premium Style */}
       {data?.setupRequired && (
-        <div className="rounded-2xl border border-warning/40 bg-warning/5 p-4 text-sm">
-          <div className="font-semibold text-warning">Database setup required</div>
-          <div className="text-muted-foreground mt-1">
-            {data.message ?? "Run supabase/schema.sql in your Supabase SQL editor, then restart backend."}
+        <div className="bg-gradient-to-r from-amber-50 to-orange-50 rounded-xl border border-amber-200 p-5">
+          <div className="flex items-start gap-3">
+            <div className="h-10 w-10 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0">
+              <span className="text-lg">⚠️</span>
+            </div>
+            <div className="flex-1">
+              <h3 className="font-semibold text-amber-900">Database Setup Required</h3>
+              <p className="text-sm text-amber-800 mt-1">
+                {data.message ?? "Run supabase/schema.sql in your Supabase SQL editor, then restart your backend server."}
+              </p>
+            </div>
           </div>
         </div>
       )}
 
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-muted-foreground">
-          Select one or more projects and click Apply to set active dashboard scope.
-        </p>
-        <Button variant="outline" onClick={applySelection}>Apply Selected Projects</Button>
-      </div>
+      {/* Quick Install Tracker */}
+      {!isLoading && projects.length > 0 && (
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+          <div className="flex items-center justify-between gap-4 mb-4">
+            <div>
+              <h2 className="text-sm font-semibold text-gray-900">Quick Install Tracker</h2>
+              <p className="text-xs text-gray-600 mt-1">Install quickly via npm link, then initialize with a selected project.</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <label className="text-xs font-medium text-gray-700">Project</label>
+              <select
+                value={selectedInstallProject?.id ?? ""}
+                onChange={(event) => setInstallProjectId(event.target.value)}
+                className="h-8 rounded-md border border-gray-300 bg-white px-2 text-xs text-gray-900"
+              >
+                {projects.map((project) => (
+                  <option key={project.id} value={project.id}>
+                    {project.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
 
-      <div className="grid lg:grid-cols-2 gap-4">
+          <div className="grid gap-3 md:grid-cols-2">
+            <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
+              <div className="text-xs font-semibold text-gray-800 mb-2">Step 1: from TrackAura repo</div>
+              <code className="block text-[11px] text-gray-700 whitespace-pre-wrap">npm run tracker:link:global</code>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="mt-3 h-7 text-xs"
+                onClick={() => copyText("npm run tracker:link:global", "Step 1 command copied")}
+              >
+                <Copy className="h-3.5 w-3.5 mr-1" /> Copy
+              </Button>
+            </div>
+
+            <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
+              <div className="text-xs font-semibold text-gray-800 mb-2">Step 2: from your other app</div>
+              <code className="block text-[11px] text-gray-700 whitespace-pre-wrap">npm link /absolute/path/to/TrackAura/packages/trackaura-tracker</code>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="mt-3 h-7 text-xs"
+                onClick={() => copyText("npm link /absolute/path/to/TrackAura/packages/trackaura-tracker", "Step 2 command copied")}
+              >
+                <Copy className="h-3.5 w-3.5 mr-1" /> Copy
+              </Button>
+            </div>
+          </div>
+
+          <div className="mt-3 rounded-lg border border-green-200 bg-green-50 p-3">
+            <div className="text-xs font-semibold text-green-900 mb-2">Init command (project ready)</div>
+            <code className="block text-[11px] text-green-900 whitespace-pre-wrap">{`import { initTrackAuraTracker } from "@trackaura/tracker";\ninitTrackAuraTracker({ apiBaseUrl: "${apiBaseUrl}", projectId: "${selectedInstallProject?.id ?? ""}" });`}</code>
+            <div className="mt-2 flex gap-2">
+              <Button
+                type="button"
+                size="sm"
+                className="h-7 text-xs bg-green-600 hover:bg-green-700"
+                onClick={() =>
+                  copyText(
+                    `import { initTrackAuraTracker } from "@trackaura/tracker";\ninitTrackAuraTracker({ apiBaseUrl: "${apiBaseUrl}", projectId: "${selectedInstallProject?.id ?? ""}" });`,
+                    "Init command copied"
+                  )
+                }
+              >
+                <Download className="h-3.5 w-3.5 mr-1" /> Copy Init
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-7 text-xs"
+                onClick={() => copyText(selectedInstallProject?.id ?? "", "Project ID copied")}
+              >
+                <Copy className="h-3.5 w-3.5 mr-1" /> Copy Project ID
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Projects Table - Premium Layout */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-base font-semibold text-gray-900">Active Projects</h2>
+            <p className="text-sm text-gray-600 mt-0.5">Select projects to activate them across your dashboards</p>
+          </div>
+          {!isLoading && projects.length > 0 && (
+            <Button variant="outline" onClick={applySelection} className="border-gray-300">
+              Apply Changes
+            </Button>
+          )}
+        </div>
+
         {isLoading && (
-          <div className="rounded-2xl border border-border bg-card p-6 text-sm text-muted-foreground">Loading projects...</div>
+          <div className="bg-white rounded-xl border border-gray-200 p-8 text-center">
+            <div className="text-gray-500 text-sm">Loading projects...</div>
+          </div>
         )}
 
         {!isLoading && projects.length === 0 && (
-          <div className="rounded-2xl border border-border bg-card p-8 text-center text-muted-foreground">
-            <FolderKanban className="h-7 w-7 mx-auto mb-2 opacity-60" />
-            No projects yet. Create your first project above.
+          <div className="bg-gradient-to-b from-gray-50 to-white rounded-xl border border-gray-200 p-12 text-center">
+            <FolderKanban className="h-10 w-10 mx-auto mb-3 text-gray-400" />
+            <p className="text-gray-600 font-medium">No projects yet</p>
+            <p className="text-sm text-gray-500 mt-1">Create your first project above to get started</p>
           </div>
         )}
 
-        {projects.map((project) => (
-          <div key={project.id} className="rounded-2xl border border-border bg-card p-5 shadow-card">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                {editingProjectId === project.id ? (
-                  <div className="space-y-2 min-w-[240px]">
-                    <Input value={editName} onChange={(e) => setEditName(e.target.value)} className="h-9" />
-                    <Input value={editWebsiteUrl} onChange={(e) => setEditWebsiteUrl(e.target.value)} className="h-9" placeholder="https://yourwebsite.com" />
+        {!isLoading && projects.length > 0 && (
+          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
+            {/* Table Header */}
+            <div className="grid grid-cols-12 gap-4 bg-gray-50 px-6 py-3 border-b border-gray-200 text-xs font-semibold text-gray-700 uppercase tracking-wider">
+              <div className="col-span-1">Select</div>
+              <div className="col-span-3">Project Name</div>
+              <div className="col-span-4">Website</div>
+              <div className="col-span-2">Stats</div>
+              <div className="col-span-2">Actions</div>
+            </div>
+
+            {/* Table Rows */}
+            <div className="divide-y divide-gray-200">
+              {projects.map((project) => (
+                <div key={project.id} className="grid grid-cols-12 gap-4 px-6 py-4 hover:bg-gray-50 transition-colors items-center">
+                  {/* Checkbox */}
+                  <div className="col-span-1">
+                    <input
+                      type="checkbox"
+                      checked={activeSet.has(project.id)}
+                      onChange={() => toggleProject(project.id)}
+                      className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                    />
                   </div>
-                ) : (
-                  <>
-                    <h3 className="text-2xl font-semibold tracking-tight">{project.name}</h3>
-                    <div className="flex items-center gap-1.5 text-sm text-muted-foreground mt-1">
-                      <Globe className="h-3.5 w-3.5" />
-                      {project.website_url ?? "No website URL"}
+
+                  {/* Project Name & URL */}
+                  <div className="col-span-3">
+                    {editingProjectId === project.id ? (
+                      <div className="space-y-2">
+                        <Input 
+                          value={editName} 
+                          onChange={(e) => setEditName(e.target.value)} 
+                          className="h-8 text-sm border-gray-200"
+                          autoFocus
+                        />
+                        <Input 
+                          value={editWebsiteUrl} 
+                          onChange={(e) => setEditWebsiteUrl(e.target.value)} 
+                          className="h-8 text-sm border-gray-200"
+                          placeholder="https://yourwebsite.com"
+                        />
+                      </div>
+                    ) : (
+                      <div>
+                        <p className="font-semibold text-gray-900 text-sm">{project.name}</p>
+                        <div className="flex items-center gap-1 text-xs text-gray-600 mt-1">
+                          <Globe className="h-3 w-3" />
+                          {project.website_url ? (
+                            <a href={project.website_url} target="_blank" rel="noopener noreferrer" className="hover:underline">
+                              {project.website_url.replace(/^https?:\/\/(www\.)?/, '')}
+                            </a>
+                          ) : (
+                            <span className="text-gray-400">No website URL</span>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* API Key */}
+                  <div className="col-span-4">
+                    <div className="bg-gray-100 rounded-lg px-3 py-2 flex items-center justify-between gap-2 group">
+                      <span className="font-mono text-xs text-gray-600 truncate">{project.api_key.substring(0, 20)}...</span>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                        onClick={() => {
+                          navigator.clipboard.writeText(project.api_key);
+                          toast({ title: "API key copied to clipboard" });
+                        }}
+                      >
+                        <Copy className="h-3.5 w-3.5 text-gray-600" />
+                      </Button>
                     </div>
-                  </>
-                )}
-              </div>
-              <div className="flex items-center gap-2">
-                {editingProjectId === project.id ? (
-                  <>
-                    <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => saveEdit(project.id)}>
-                      <Save className="h-3.5 w-3.5" />
-                    </Button>
-                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setEditingProjectId(null)}>
-                      <X className="h-3.5 w-3.5" />
-                    </Button>
-                  </>
-                ) : (
-                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => startEdit(project)}>
-                    <PencilLine className="h-3.5 w-3.5" />
-                  </Button>
-                )}
-                <label className="inline-flex items-center gap-2 text-xs font-medium text-muted-foreground">
-                  <input
-                    type="checkbox"
-                    checked={activeSet.has(project.id)}
-                    onChange={() => toggleProject(project.id)}
-                    className="h-4 w-4 rounded"
-                  />
-                  Active
-                </label>
-              </div>
-            </div>
+                  </div>
 
-            <div className="mt-4 rounded-xl border border-input bg-background px-3 py-2 text-xs flex items-center justify-between gap-3">
-              <span className="font-mono truncate">{project.api_key}</span>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-7 w-7"
-                onClick={() => {
-                  navigator.clipboard.writeText(project.api_key);
-                  toast({ title: "API key copied" });
-                }}
-              >
-                <Copy className="h-3.5 w-3.5" />
-              </Button>
-            </div>
+                  {/* Quick Stats */}
+                  <div className="col-span-2">
+                    <div className="text-xs space-y-1">
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Views:</span>
+                        <span className="font-semibold text-gray-900">{project.stats.pageViews.toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Users:</span>
+                        <span className="font-semibold text-gray-900">{project.stats.visitors.toLocaleString()}</span>
+                      </div>
+                    </div>
+                  </div>
 
-            <div className="mt-4 grid grid-cols-3 gap-3 text-center">
-              <div className="rounded-lg border border-border p-3">
-                <div className="text-xs text-muted-foreground">Page Views</div>
-                <div className="text-xl font-bold mt-1">{project.stats.pageViews.toLocaleString()}</div>
-              </div>
-              <div className="rounded-lg border border-border p-3">
-                <div className="text-xs text-muted-foreground">Visitors</div>
-                <div className="text-xl font-bold mt-1">{project.stats.visitors.toLocaleString()}</div>
-              </div>
-              <div className="rounded-lg border border-border p-3">
-                <div className="text-xs text-muted-foreground">Live</div>
-                <div className="text-xl font-bold mt-1 text-primary">{project.stats.live.toLocaleString()}</div>
-              </div>
-            </div>
-
-            <div className="mt-4 flex items-center gap-2">
-              <Button
-                variant="outline"
-                className="flex-1"
-                onClick={() => {
-                  setStoredProjectIds(project.id);
-                  navigate("/dashboard/realtime");
-                }}
-              >
-                View Analytics
-              </Button>
-              <Button
-                variant="outline"
-                className="flex-1"
-                onClick={() => {
-                  navigator.clipboard.writeText(`<script src=\"https://YOUR_DOMAIN/sdk.js\" data-api-key=\"${project.api_key}\"></script>`);
-                  toast({ title: "Integration snippet copied" });
-                }}
-              >
-                Integration
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-10 w-10 text-destructive"
-                onClick={() => deleteMutation.mutate(project.id)}
-                disabled={deleteMutation.isPending}
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
+                  {/* Action Buttons */}
+                  <div className="col-span-2 flex items-center justify-end gap-1">
+                    {editingProjectId === project.id ? (
+                      <>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-8 w-8 text-green-600 hover:bg-green-50"
+                          onClick={() => saveEdit(project.id)}
+                        >
+                          <Save className="h-4 w-4" />
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-8 w-8 text-gray-600"
+                          onClick={() => setEditingProjectId(null)}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </>
+                    ) : (
+                      <>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-8 w-8 text-gray-600 hover:bg-gray-200"
+                          onClick={() => startEdit(project)}
+                        >
+                          <PencilLine className="h-4 w-4" />
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-8 w-8 text-red-600 hover:bg-red-50"
+                          onClick={() => deleteMutation.mutate(project.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </>
+                    )}
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
-        ))}
+        )}
       </div>
     </div>
   );
 }
+
