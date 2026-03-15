@@ -21,11 +21,15 @@ export function SessionReplayViewer({
   durationMs,
   page,
   previewUrl,
+  sessionId,
+  deviceType,
 }: {
   events: SessionReplayEvent[];
   durationMs: number;
   page: string;
   previewUrl?: string | null;
+  sessionId?: string;
+  deviceType?: "desktop" | "tablet" | "mobile";
 }) {
   const [playing, setPlaying] = useState(false);
   const [speed, setSpeed] = useState(1);
@@ -162,17 +166,36 @@ export function SessionReplayViewer({
     }
   }, [previewUrl, page]);
 
+  const deviceLabel = useMemo(() => {
+    if (!deviceType) return "Desktop";
+    if (deviceType === "mobile") return "Mobile";
+    if (deviceType === "tablet") return "Tablet";
+    return "Desktop";
+  }, [deviceType]);
+
   return (
-    <div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
-      <div className="px-5 py-4 border-b border-gray-200 flex items-center justify-between gap-3">
-        <div>
-          <h3 className="text-sm font-semibold text-gray-900">Session Replay Viewer</h3>
-          <p className="text-xs text-gray-600 mt-0.5">Page: {page}</p>
+    <div className="overflow-hidden rounded-2xl border border-[#daeeda] bg-white shadow-sm">
+      <div className="border-b border-[#daeeda] bg-[#f4f7f4] px-4 py-2.5">
+        <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-1.5">
+            <span className="h-2.5 w-2.5 rounded-full bg-[#ff6b6b]" />
+            <span className="h-2.5 w-2.5 rounded-full bg-[#ffd93d]" />
+            <span className="h-2.5 w-2.5 rounded-full bg-[#6bcb77]" />
+          </div>
+
+          <div className="flex min-w-0 flex-1 items-center gap-1 rounded-md border border-[#daeeda] bg-white px-3 py-1 text-[11px] text-[#5a8a5a]">
+            <span className="opacity-40">lock</span>
+            <span className="truncate">{page.startsWith("/") ? `app.example.com${page}` : page}</span>
+          </div>
+
+          <div className="hidden items-center gap-2 text-[10px] text-[#9ab89a] md:flex">
+            <span>{sessionId ? sessionId.slice(0, 14) : "session"}</span>
+            <span>{deviceLabel}</span>
+          </div>
         </div>
-        <div className="text-xs text-gray-600">{formatMs(Math.round(progressMs))} / {formatMs(durationMs)}</div>
       </div>
 
-      <div className="p-4 border-b border-gray-200 bg-gray-50">
+      <div className="border-b border-[#f0f7f0] bg-[#fafcfa] p-4">
         <div className="flex items-center gap-2">
           <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setProgressMs((prev) => clamp(prev - 5000, 0, durationMs))}>
             <SkipBack className="h-4 w-4" />
@@ -192,6 +215,8 @@ export function SessionReplayViewer({
               step={0.1}
             />
           </div>
+
+          <div className="min-w-[95px] text-[12px] text-[#1a3a1a]">{formatMs(Math.round(progressMs))} / {formatMs(durationMs)}</div>
 
           <select
             value={String(speed)}
@@ -218,7 +243,7 @@ export function SessionReplayViewer({
       </div>
 
       <div className="p-4" ref={stageRef}>
-        <div className="relative h-[72vh] min-h-[520px] rounded-xl border border-gray-200 bg-white overflow-hidden">
+        <div className="relative h-[64vh] min-h-[420px] rounded-xl border border-[#e8f0e8] bg-[#f9fafb] overflow-hidden">
           <div className="absolute inset-x-0 top-0 h-10 border-b border-gray-200 bg-gray-50 px-3 text-xs text-gray-500 flex items-center justify-between">
             <span>{page}</span>
             <span>Scroll progress: {Math.round(scrollProgress * 100)}%</span>
