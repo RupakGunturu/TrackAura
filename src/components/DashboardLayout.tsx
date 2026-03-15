@@ -24,6 +24,7 @@ export function DashboardLayout() {
   const projectAllowedPaths = ["/dashboard/projects", "/projects", "/dashboard/settings", "/dashboard/team"];
   const isProjectSetupPath = projectAllowedPaths.includes(location.pathname);
   const isEntryPath = ["/", "/dashboard"].includes(location.pathname);
+  const isImmersiveAnalyticsPath = ["/dashboard/heatmaps", "/dashboard/sessions", "/heatmap", "/sessions"].includes(location.pathname);
   const shouldLockAnalytics = !hasProjects || !selectedProject || !hasIntegratedSelection;
 
   useEffect(() => {
@@ -83,7 +84,7 @@ export function DashboardLayout() {
 
           {/* Page Content */}
           <main className="flex-1 overflow-auto bg-gray-50">
-            <div className="max-w-screen-2xl mx-auto px-6 py-8">
+            <div className={`${isImmersiveAnalyticsPath ? "max-w-none" : "max-w-screen-2xl"} mx-auto px-6 py-8`}>
               {!isLoading && shouldLockAnalytics && !isProjectSetupPath ? (
                 <ProjectLockedState hasProjects={hasProjects} />
               ) : (

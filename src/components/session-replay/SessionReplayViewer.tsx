@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
-import { Pause, Play, SkipBack, SkipForward } from "lucide-react";
+import { Expand, Minimize, Pause, Play, SkipBack, SkipForward } from "lucide-react";
 import type { SessionReplayEvent } from "@/lib/sessionReplayApi";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
@@ -20,20 +20,24 @@ export function SessionReplayViewer({
   events,
   durationMs,
   page,
+  previewUrl,
 }: {
   events: SessionReplayEvent[];
   durationMs: number;
   page: string;
+  previewUrl?: string | null;
 }) {
   const [playing, setPlaying] = useState(false);
   const [speed, setSpeed] = useState(1);
   const [progressMs, setProgressMs] = useState(0);
-  const [cursor, setCursor] = useState({ x: 30, y: 30, clickPulse: 0 });
-  const [scrollY, setScrollY] = useState(0);
+  const [cursor, setCursor] = useState({ xRatio: 0.12, yRatio: 0.12, clickPulse: 0 });
+  const [scrollProgress, setScrollProgress] = useState(0);
   const [inputValue, setInputValue] = useState("");
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   const rafRef = useRef<number | null>(null);
   const lastTickRef = useRef<number>(0);
+  const stageRef = useRef<HTMLDivElement | null>(null);
 
   const startTs = events[0]?.timestamp ?? 0;
 
@@ -46,8 +50,15 @@ export function SessionReplayViewer({
     const lastEvent = visibleEvents[visibleEvents.length - 1];
     if (!lastEvent) return;
 
+    const viewportW = Math.max(1, Math.round(lastEvent.viewportW ?? 1366));
+    const viewportH = Math.max(1, Math.round(lastEvent.viewportH ?? 768));
+
     if (typeof lastEvent.x === "number" && typeof lastEvent.y === "number") {
-      setCursor((prev) => ({ ...prev, x: clamp(lastEvent.x, 0, 1100), y: clamp(lastEvent.y, 0, 600) }));
+      setCursor((prev) => ({
+        ...prev,
+        xRatio: clamp(lastEvent.x / viewportW, 0, 1),
+        yRatio: clamp(lastEvent.y / viewportH, 0, 1),
+      }));
     }
 
     if (lastEvent.type === "click") {
@@ -55,13 +66,22 @@ export function SessionReplayViewer({
     }
 
     if (lastEvent.type === "scroll" && typeof lastEvent.scrollY === "number") {
-      setScrollY(lastEvent.scrollY);
+      setScrollProgress(clamp(lastEvent.scrollY / (viewportH * 4), 0, 1));
     }
 
     if (lastEvent.type === "input" && typeof lastEvent.value === "string") {
       setInputValue(lastEvent.value);
     }
   }, [visibleEvents]);
+
+  useEffect(() => {
+    const onFsChange = () => {
+      setIsFullscreen(Boolean(document.fullscreenElement));
+    };
+
+    document.addEventListener("fullscreenchange", onFsChange);
+    return () => document.removeEventListener("fullscreenchange", onFsChange);
+  }, []);
 
   useEffect(() => {
     if (!playing) {
@@ -98,6 +118,49 @@ export function SessionReplayViewer({
   }, [playing, speed, durationMs]);
 
   const progressPct = durationMs > 0 ? (progressMs / durationMs) * 100 : 0;
+
+  const eventStats = useMemo(() => {
+    const stats = {
+      click: 0,
+      scroll: 0,
+      attention: 0,
+    };
+
+    for (const event of visibleEvents) {
+      if (event.type === "click") stats.click += 1;
+      if (event.type === "scroll") stats.scroll += 1;
+      if (event.type === "mousemove") stats.attention += 1;
+    }
+
+    return stats;
+  }, [visibleEvents]);
+
+  const toggleFullscreen = async () => {
+    const target = stageRef.current;
+    if (!target) return;
+
+    if (!document.fullscreenElement) {
+      await target.requestFullscreen();
+      return;
+    }
+
+    await document.exitFullscreen();
+  };
+
+  const resolvedPreviewUrl = useMemo(() => {
+    if (!previewUrl) return null;
+    if (page.startsWith("http://") || page.startsWith("https://")) return page;
+
+    try {
+      const base = new URL(previewUrl);
+      if (page.startsWith("/")) {
+        return `${base.origin}${page}`;
+      }
+      return `${base.origin}/${page}`;
+    } catch {
+      return previewUrl;
+    }
+  }, [previewUrl, page]);
 
   return (
     <div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
@@ -141,35 +204,60 @@ export function SessionReplayViewer({
             <option value="2">2x</option>
             <option value="3">3x</option>
           </select>
+
+          <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => void toggleFullscreen()}>
+            {isFullscreen ? <Minimize className="h-4 w-4" /> : <Expand className="h-4 w-4" />}
+          </Button>
+        </div>
+
+        <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
+          <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-emerald-700">Clicks: {eventStats.click}</span>
+          <span className="rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-amber-700">Scrolls: {eventStats.scroll}</span>
+          <span className="rounded-full border border-sky-200 bg-sky-50 px-2.5 py-1 text-sky-700">Attention: {eventStats.attention}</span>
         </div>
       </div>
 
-      <div className="p-4">
-        <div className="relative h-[440px] rounded-xl border border-gray-200 bg-white overflow-hidden">
+      <div className="p-4" ref={stageRef}>
+        <div className="relative h-[72vh] min-h-[520px] rounded-xl border border-gray-200 bg-white overflow-hidden">
           <div className="absolute inset-x-0 top-0 h-10 border-b border-gray-200 bg-gray-50 px-3 text-xs text-gray-500 flex items-center justify-between">
             <span>{page}</span>
-            <span>Scroll Y: {Math.round(scrollY)}px</span>
+            <span>Scroll progress: {Math.round(scrollProgress * 100)}%</span>
           </div>
 
           <div className="absolute left-0 right-0 top-10 bottom-0 overflow-hidden">
-            <motion.div
-              className="absolute left-4 right-4 top-4 rounded-lg border border-gray-200 bg-gray-50 p-3"
-              animate={{ y: clamp(-scrollY / 6, -220, 0) }}
-              transition={{ type: "tween", duration: 0.2 }}
-            >
-              <div className="h-5 w-32 rounded bg-gray-200" />
-              <div className="mt-3 h-3 w-full rounded bg-gray-200" />
-              <div className="mt-2 h-3 w-4/5 rounded bg-gray-200" />
-              <div className="mt-2 h-3 w-3/5 rounded bg-gray-200" />
+            {resolvedPreviewUrl ? (
+              <motion.div
+                className="absolute inset-0"
+                animate={{ y: clamp(-scrollProgress * 260, -260, 0) }}
+                transition={{ type: "tween", duration: 0.2 }}
+              >
+                <iframe
+                  src={resolvedPreviewUrl}
+                  title="Session replay preview"
+                  className="h-full w-full"
+                  sandbox="allow-same-origin allow-scripts allow-forms allow-popups"
+                />
+              </motion.div>
+            ) : (
+              <motion.div
+                className="absolute left-4 right-4 top-4 rounded-lg border border-gray-200 bg-gray-50 p-3"
+                animate={{ y: clamp(-scrollProgress * 220, -220, 0) }}
+                transition={{ type: "tween", duration: 0.2 }}
+              >
+                <div className="h-5 w-32 rounded bg-gray-200" />
+                <div className="mt-3 h-3 w-full rounded bg-gray-200" />
+                <div className="mt-2 h-3 w-4/5 rounded bg-gray-200" />
+                <div className="mt-2 h-3 w-3/5 rounded bg-gray-200" />
 
-              <div className="mt-5 rounded-md border border-gray-300 bg-white p-2 text-xs text-gray-700">
-                {inputValue || "Input playback will appear here"}
-              </div>
-            </motion.div>
+                <div className="mt-5 rounded-md border border-gray-300 bg-white p-2 text-xs text-gray-700">
+                  {inputValue || "Input playback will appear here"}
+                </div>
+              </motion.div>
+            )}
 
             <motion.div
               className="absolute z-20"
-              animate={{ x: cursor.x, y: cursor.y }}
+              animate={{ x: `${cursor.xRatio * 100}%`, y: `${cursor.yRatio * 100}%` }}
               transition={{ type: "spring", stiffness: 260, damping: 22, mass: 0.6 }}
             >
               <div className="relative">

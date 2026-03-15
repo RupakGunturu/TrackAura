@@ -18,21 +18,28 @@ interface UseHeatmapOptions {
   radius?: number;
   maxOpacity?: number;
   blur?: number;
+  paletteStops?: Array<{ offset: number; color: string }>;
 }
 
 /** Build a 256-entry RGBA palette (blue → cyan → green → yellow → red). */
-function buildPalette(): Uint8ClampedArray {
+function buildPalette(stops?: Array<{ offset: number; color: string }>): Uint8ClampedArray {
   const canvas = document.createElement("canvas");
   canvas.width = 256;
   canvas.height = 1;
   const ctx = canvas.getContext("2d")!;
 
   const grd = ctx.createLinearGradient(0, 0, 256, 0);
-  grd.addColorStop(0.0, "#3b82f6");  // blue-500
-  grd.addColorStop(0.2, "#22d3ee");  // cyan-400
-  grd.addColorStop(0.45, "#22c55e"); // green-500
-  grd.addColorStop(0.7, "#facc15");  // yellow-400
-  grd.addColorStop(1.0, "#ef4444");  // red-500
+  const paletteStops = stops ?? [
+    { offset: 0.0, color: "#3b82f6" },
+    { offset: 0.2, color: "#22d3ee" },
+    { offset: 0.45, color: "#22c55e" },
+    { offset: 0.7, color: "#facc15" },
+    { offset: 1.0, color: "#ef4444" },
+  ];
+
+  for (const stop of paletteStops) {
+    grd.addColorStop(stop.offset, stop.color);
+  }
 
   ctx.fillStyle = grd;
   ctx.fillRect(0, 0, 256, 1);
@@ -40,10 +47,15 @@ function buildPalette(): Uint8ClampedArray {
   return ctx.getImageData(0, 0, 256, 1).data;
 }
 
-let paletteCache: Uint8ClampedArray | null = null;
-function getPalette(): Uint8ClampedArray {
-  if (!paletteCache) paletteCache = buildPalette();
-  return paletteCache;
+const paletteCache = new Map<string, Uint8ClampedArray>();
+function getPalette(stops?: Array<{ offset: number; color: string }>): Uint8ClampedArray {
+  const key = JSON.stringify(stops ?? []);
+  const cached = paletteCache.get(key);
+  if (cached) return cached;
+
+  const palette = buildPalette(stops);
+  paletteCache.set(key, palette);
+  return palette;
 }
 
 /** Render heatmap data onto a canvas element. */
@@ -52,7 +64,8 @@ function renderHeatmap(
   data: HeatmapPoint[],
   radius: number,
   maxOpacity: number,
-  blur: number
+  blur: number,
+  paletteStops?: Array<{ offset: number; color: string }>
 ) {
   const width = canvas.width;
   const height = canvas.height;
@@ -87,7 +100,7 @@ function renderHeatmap(
   // ── Step 2: Colorize using the palette ──
   const imageData = ctx.getImageData(0, 0, width, height);
   const pixels = imageData.data;
-  const palette = getPalette();
+  const palette = getPalette(paletteStops);
 
   for (let i = 0, len = pixels.length; i < len; i += 4) {
     const alpha = pixels[i + 3]; // use alpha as intensity index
@@ -112,7 +125,7 @@ export function useHeatmap(
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
-  const { radius = 40, maxOpacity = 0.6, blur = 0.85 } = options;
+  const { radius = 40, maxOpacity = 0.6, blur = 0.85, paletteStops } = options;
 
   // ── Create / resize canvas to match container ──
   const ensureCanvas = useCallback(() => {
@@ -149,8 +162,8 @@ export function useHeatmap(
     const canvas = ensureCanvas();
     if (!canvas) return;
 
-    renderHeatmap(canvas, data, radius, maxOpacity, blur);
-  }, [data, radius, maxOpacity, blur, ensureCanvas]);
+    renderHeatmap(canvas, data, radius, maxOpacity, blur, paletteStops);
+  }, [data, radius, maxOpacity, blur, paletteStops, ensureCanvas]);
 
   // ── Handle container resizes ──
   useEffect(() => {
@@ -160,12 +173,12 @@ export function useHeatmap(
     const ro = new ResizeObserver(() => {
       const canvas = ensureCanvas();
       if (canvas && data.length > 0) {
-        renderHeatmap(canvas, data, radius, maxOpacity, blur);
+        renderHeatmap(canvas, data, radius, maxOpacity, blur, paletteStops);
       }
     });
     ro.observe(el);
     return () => ro.disconnect();
-  }, [data, radius, maxOpacity, blur, ensureCanvas]);
+  }, [data, radius, maxOpacity, blur, paletteStops, ensureCanvas]);
 
   // ── Cleanup on unmount ──
   useEffect(() => {

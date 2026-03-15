@@ -94,16 +94,28 @@ const HeatmapDashboard: React.FC = () => {
     const points = [...(data?.points ?? [])].sort((a, b) => b.value - a.value).slice(0, 8);
     const topValue = points[0]?.value ?? 1;
 
+    const labelByMode: Record<HeatmapMode, string> = {
+      click: "Clicks",
+      scroll: "Depth Score",
+      attention: "Attention Score",
+    };
+
+    const zoneNameByMode: Record<HeatmapMode, string> = {
+      click: "Click Zone",
+      scroll: "Scroll Band",
+      attention: "Attention Zone",
+    };
+
     return points.map((point, index) => ({
       id: index + 1,
-      name: `Zone ${index + 1}`,
-      selector: `x:${Math.round(point.xRatio * 100)} y:${Math.round(point.yRatio * 100)}`,
+      name: `${zoneNameByMode[mode]} ${index + 1}`,
+      selector: `${labelByMode[mode]} · x:${Math.round(point.xRatio * 100)} y:${Math.round(point.yRatio * 100)}`,
       clicks: point.value,
       percent: Math.round((point.value / topValue) * 100),
       trend: index % 3 === 0 ? "up" : index % 3 === 1 ? "flat" : "down",
       trendValue: index % 3 === 0 ? "+4.1%" : index % 3 === 1 ? "+0.2%" : "-1.8%",
     }));
-  }, [data]);
+  }, [data, mode]);
 
   useEffect(() => {
     const stopTracker = startHeatmapTracker({
@@ -210,35 +222,32 @@ const HeatmapDashboard: React.FC = () => {
         isRefreshing={isFetching}
       />
 
-      {/* Main Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left: Heatmap Viewer */}
-        <div className="lg:col-span-2">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={mode}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.3 }}
-            >
-              <HeatmapViewer
-                mode={mode}
-                loading={false}
-                liveData={data?.points ?? []}
-                viewport={data?.viewport ?? null}
-                previewUrl={selectedProject?.website_url ?? null}
-                previewTitle={selectedProject?.name ?? "Project"}
-              />
-            </motion.div>
-          </AnimatePresence>
-        </div>
+      {/* Primary Viewer */}
+      <div>
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={mode}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            <HeatmapViewer
+              mode={mode}
+              loading={false}
+              liveData={data?.points ?? []}
+              viewport={data?.viewport ?? null}
+              previewUrl={selectedProject?.website_url ?? null}
+              previewTitle={selectedProject?.name ?? "Project"}
+            />
+          </motion.div>
+        </AnimatePresence>
+      </div>
 
-        {/* Right: Insights + Top Elements */}
-        <div className="flex flex-col gap-6">
-          <HeatmapInsightsPanel insights={liveInsights} />
-          <TopInteractions elements={liveTopElements} />
-        </div>
+      {/* Insights row */}
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+        <HeatmapInsightsPanel insights={liveInsights} />
+        <TopInteractions elements={liveTopElements} />
       </div>
     </div>
   );

@@ -5,6 +5,8 @@ export interface SessionReplayEvent {
   x?: number;
   y?: number;
   scrollY?: number;
+  viewportW?: number;
+  viewportH?: number;
   value?: string;
   timestamp: number;
 }

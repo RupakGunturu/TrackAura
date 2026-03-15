@@ -26,6 +26,8 @@ interface InteractionEventRow {
   x: number;
   y: number;
   value: number;
+  viewport_w: number;
+  viewport_h: number;
   device_type: "desktop" | "tablet" | "mobile";
   created_at: string;
 }
@@ -35,7 +37,7 @@ export const sessionReplayRouter = Router();
 async function loadInteractionRows(projectId: string, page?: string) {
   let query = supabaseAdmin
     .from("interaction_events")
-    .select("session_id,page_path,event_type,x,y,value,device_type,created_at")
+    .select("session_id,page_path,event_type,x,y,value,viewport_w,viewport_h,device_type,created_at")
     .eq("project_id", projectId)
     .order("created_at", { ascending: false })
     .limit(20000);
@@ -105,19 +107,26 @@ sessionReplayRouter.post("/session-events", async (req, res, next) => {
     // Bridge replay events into interaction_events so realtime/heatmaps update from integrated projects.
     const interactionRows = events
       .filter((event) => event.type === "mousemove" || event.type === "click" || event.type === "scroll")
-      .map((event) => ({
-        project_id: projectId,
-        session_id: sessionId,
-        page_path: page,
-        event_type: event.type === "mousemove" ? "attention" : event.type,
-        x: Math.max(0, Math.round(event.x ?? 0)),
-        y: Math.max(0, Math.round(event.type === "scroll" ? event.scrollY ?? 0 : event.y ?? 0)),
-        value: Math.max(1, Math.round(event.type === "scroll" ? event.scrollY ?? 1 : 1)),
-        viewport_w: Math.max(1, Math.round(event.viewportW ?? 1366)),
-        viewport_h: Math.max(1, Math.round(event.viewportH ?? 768)),
-        device_type: deviceType ?? "desktop",
-        created_at: new Date(event.timestamp).toISOString(),
-      }));
+      .map((event) => {
+        const viewportW = Math.max(1, Math.round(event.viewportW ?? 1366));
+        const viewportH = Math.max(1, Math.round(event.viewportH ?? 768));
+        const scrollY = Math.max(0, Math.round(event.scrollY ?? 0));
+        const normalizedScrollDepth = Math.max(1, Math.min(100, Math.round((scrollY / viewportH) * 100)));
+
+        return {
+          project_id: projectId,
+          session_id: sessionId,
+          page_path: page,
+          event_type: event.type === "mousemove" ? "attention" : event.type,
+          x: Math.max(0, Math.round(event.x ?? 0)),
+          y: Math.max(0, Math.round(event.type === "scroll" ? scrollY : event.y ?? 0)),
+          value: event.type === "scroll" ? normalizedScrollDepth : 1,
+          viewport_w: viewportW,
+          viewport_h: viewportH,
+          device_type: deviceType ?? "desktop",
+          created_at: new Date(event.timestamp).toISOString(),
+        };
+      });
 
     if (interactionRows.length > 0) {
       const { error: insertError } = await supabaseAdmin.from("interaction_events").insert(interactionRows);
@@ -308,6 +317,8 @@ sessionReplayRouter.get("/session-replay/:sessionId", async (req, res, next) => 
       x: row.x,
       y: row.y,
       scrollY: row.event_type === "scroll" ? row.y : undefined,
+      viewportW: row.viewport_w,
+      viewportH: row.viewport_h,
       value: row.event_type === "scroll" ? String(row.value) : undefined,
       timestamp: +new Date(row.created_at),
     }));

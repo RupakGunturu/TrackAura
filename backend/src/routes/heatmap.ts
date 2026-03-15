@@ -25,7 +25,7 @@ interface RepresentativeViewport {
 const BINS_X = 60;
 const BINS_Y = 45;
 
-function aggregatePoints(rows: EventRow[]): AggregatedPoint[] {
+function aggregatePoints(rows: EventRow[], mode: "click" | "scroll" | "attention"): AggregatedPoint[] {
   const buckets = new Map<string, number>();
 
   for (const row of rows) {
@@ -33,8 +33,16 @@ function aggregatePoints(rows: EventRow[]): AggregatedPoint[] {
       continue;
     }
 
-    const nx = Math.min(Math.max(row.x / row.viewport_w, 0), 0.9999);
-    const ny = Math.min(Math.max(row.y / row.viewport_h, 0), 0.9999);
+    const nx = mode === "scroll"
+      ? 0.5
+      : Math.min(Math.max(row.x / row.viewport_w, 0), 0.9999);
+
+    // Scroll events store normalized depth in `value` (0-100).
+    // Falling back to `y / viewport_h` keeps older rows usable.
+    const scrollDepthRatio = Math.min(Math.max((row.value || 0) / 100, 0), 0.9999);
+    const ny = mode === "scroll"
+      ? (scrollDepthRatio > 0 ? scrollDepthRatio : Math.min(Math.max(row.y / row.viewport_h, 0), 0.9999))
+      : Math.min(Math.max(row.y / row.viewport_h, 0), 0.9999);
 
     const gx = Math.floor(nx * BINS_X);
     const gy = Math.floor(ny * BINS_Y);
@@ -120,7 +128,7 @@ heatmapRouter.get("/heatmap", async (req, res, next) => {
     }
 
     const rows = (data ?? []) as EventRow[];
-    const points = aggregatePoints(rows);
+    const points = aggregatePoints(rows, mode);
     const viewport = getRepresentativeViewport(rows);
 
     console.log("[heatmap] Query result", {

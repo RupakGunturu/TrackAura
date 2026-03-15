@@ -75,15 +75,97 @@ function makeRealtime(rows: EventRow[], from: Date, to: Date) {
 
     return {
       t: i,
+      label: bucketStart.toISOString().slice(11, 16),
       v: Math.max(0, uniqueSessions(bucketRows)),
     };
   });
 
-  const regionNames = ["North America", "Europe", "Asia-Pacific", "Rest of World"];
-  const regionSessionSets = [new Set<string>(), new Set<string>(), new Set<string>(), new Set<string>()];
+  const sessionMap = new Map<string, EventRow[]>();
+  for (const row of rows) {
+    if (!sessionMap.has(row.session_id)) {
+      sessionMap.set(row.session_id, []);
+    }
+    sessionMap.get(row.session_id)?.push(row);
+  }
+
+  const sessions = [...sessionMap.values()];
+
+  const avgDurationSec = sessions.length
+    ? Math.round(
+        sessions.reduce((acc, events) => {
+          const sorted = [...events].sort((a, b) => +new Date(a.created_at) - +new Date(b.created_at));
+          if (sorted.length < 2) return acc;
+          const durationSec = Math.max(0, Math.round((+new Date(sorted.at(-1)!.created_at) - +new Date(sorted[0].created_at)) / 1000));
+          return acc + durationSec;
+        }, 0) / sessions.length
+      )
+    : 0;
+
+  const bounceSessions = sessions.filter((events) => {
+    const pageSet = new Set(events.map((event) => event.page_path));
+    return pageSet.size <= 1;
+  }).length;
+  const bounceRate = sessions.length ? Number(((bounceSessions / sessions.length) * 100).toFixed(1)) : 0;
+
+  const newSessions = sessions.filter((events) => {
+    const daySet = new Set(events.map((event) => event.created_at.slice(0, 10)));
+    return daySet.size <= 1;
+  }).length;
+  const returningSessions = Math.max(0, sessions.length - newSessions);
+
+  const deviceCounts = currentRows.reduce(
+    (acc, row) => {
+      if (row.device_type === "mobile") acc.mobile += 1;
+      else if (row.device_type === "tablet") acc.tablet += 1;
+      else acc.desktop += 1;
+      return acc;
+    },
+    { mobile: 0, desktop: 0, tablet: 0 }
+  );
+
+  const deviceTotal = Math.max(1, deviceCounts.mobile + deviceCounts.desktop + deviceCounts.tablet);
+  const deviceBreakdown = [
+    { name: "mobile", value: Math.round((deviceCounts.mobile / deviceTotal) * 100) },
+    { name: "desktop", value: Math.round((deviceCounts.desktop / deviceTotal) * 100) },
+    { name: "tablet", value: Math.round((deviceCounts.tablet / deviceTotal) * 100) },
+  ];
+
+  const todayKey = to.toISOString().slice(0, 10);
+  const todayRows = rows.filter((row) => row.created_at.slice(0, 10) === todayKey);
+  const minuteBuckets = new Map<string, Set<string>>();
+
+  for (const row of todayRows) {
+    const minute = row.created_at.slice(11, 16);
+    if (!minuteBuckets.has(minute)) {
+      minuteBuckets.set(minute, new Set());
+    }
+    minuteBuckets.get(minute)?.add(row.session_id);
+  }
+
+  const peakEntry = [...minuteBuckets.entries()].sort((a, b) => b[1].size - a[1].size)[0];
+  const peakTraffic = {
+    time: peakEntry?.[0] ?? to.toISOString().slice(11, 16),
+    users: peakEntry?.[1].size ?? onlineUsers,
+    deltaPct: previousUsers > 0 ? Math.round(((onlineUsers - previousUsers) / previousUsers) * 100) : 0,
+  };
+
+  const regionNames = [
+    "India - North",
+    "India - West",
+    "India - South",
+    "India - East",
+    "India - Central",
+  ];
+  const regionSessionSets = [
+    new Set<string>(),
+    new Set<string>(),
+    new Set<string>(),
+    new Set<string>(),
+    new Set<string>(),
+  ];
 
   for (const row of currentRows) {
-    const index = Math.abs(row.session_id.split("").reduce((acc, ch) => acc + ch.charCodeAt(0), 0)) % 4;
+    const index = Math.abs(row.session_id.split("").reduce((acc, ch) => acc + ch.charCodeAt(0), 0)) % 5;
     regionSessionSets[index].add(row.session_id);
   }
 
@@ -101,6 +183,17 @@ function makeRealtime(rows: EventRow[], from: Date, to: Date) {
     data: points,
     regions,
     pages: getTopPages(currentRows),
+    stats: {
+      sessions: sessions.length,
+      avgDurationSec,
+      bounceRate,
+    },
+    newVsReturning: {
+      new: newSessions,
+      returning: returningSessions,
+    },
+    deviceBreakdown,
+    peakTraffic,
     from: from.toISOString(),
     to: to.toISOString(),
   };

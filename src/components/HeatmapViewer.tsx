@@ -44,27 +44,11 @@ const HeatmapViewer: React.FC<HeatmapViewerProps> = ({
       return { width: 0, height: 0, left: 0, top: 0 };
     }
 
-    const sourceW = viewport?.width ?? 1366;
-    const sourceH = viewport?.height ?? 768;
-    const sourceRatio = sourceW / sourceH;
-    const containerRatio = containerW / containerH;
-
-    let width = containerW;
-    let height = containerH;
-
-    if (containerRatio > sourceRatio) {
-      height = containerH;
-      width = Math.round(height * sourceRatio);
-    } else {
-      width = containerW;
-      height = Math.round(width / sourceRatio);
-    }
-
     return {
-      width,
-      height,
-      left: Math.round((containerW - width) / 2),
-      top: Math.round((containerH - height) / 2),
+      width: containerW,
+      height: containerH,
+      left: 0,
+      top: 0,
     };
   }, [dimensions, viewport]);
 
@@ -110,10 +94,47 @@ const HeatmapViewer: React.FC<HeatmapViewerProps> = ({
     attention: 55,
   };
 
+  const paletteByMode: Record<HeatmapMode, Array<{ offset: number; color: string }>> = {
+    click: [
+      { offset: 0, color: "#10b981" },
+      { offset: 0.45, color: "#f59e0b" },
+      { offset: 1, color: "#ef4444" },
+    ],
+    scroll: [
+      { offset: 0, color: "#60a5fa" },
+      { offset: 0.5, color: "#2563eb" },
+      { offset: 1, color: "#1e3a8a" },
+    ],
+    attention: [
+      { offset: 0, color: "#22d3ee" },
+      { offset: 0.5, color: "#8b5cf6" },
+      { offset: 1, color: "#ec4899" },
+    ],
+  };
+
+  const legendLabelByMode: Record<HeatmapMode, { low: string; high: string; gradient: string }> = {
+    click: {
+      low: "Low clicks",
+      high: "High clicks",
+      gradient: "linear-gradient(to right, #10b981, #f59e0b, #ef4444)",
+    },
+    scroll: {
+      low: "Shallow scroll",
+      high: "Deep scroll",
+      gradient: "linear-gradient(to right, #60a5fa, #2563eb, #1e3a8a)",
+    },
+    attention: {
+      low: "Low attention",
+      high: "High attention",
+      gradient: "linear-gradient(to right, #22d3ee, #8b5cf6, #ec4899)",
+    },
+  };
+
   const { containerRef } = useHeatmap(scaledData, {
     radius: radiusMap[mode],
     maxOpacity: mode === "scroll" ? 0.45 : 0.55,
     blur: mode === "scroll" ? 0.95 : 0.85,
+    paletteStops: paletteByMode[mode],
   });
 
   const handleZoomIn = () => setZoom((z) => Math.min(z + 0.15, 2));
@@ -185,7 +206,7 @@ const HeatmapViewer: React.FC<HeatmapViewerProps> = ({
       <div
         ref={wrapperRef}
         className="relative overflow-auto"
-        style={{ height: isFullscreen ? "calc(100vh - 40px)" : 680 }}
+        style={{ height: isFullscreen ? "calc(100vh - 40px)" : "clamp(760px, 82vh, 980px)" }}
       >
         <AnimatePresence mode="wait">
           {loading ? (
@@ -244,9 +265,9 @@ const HeatmapViewer: React.FC<HeatmapViewerProps> = ({
 
         {/* Inline legend */}
         <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-white/90 backdrop-blur-sm rounded-full px-4 py-1.5 shadow-sm border border-gray-100 z-10">
-          <span className="text-[10px] text-gray-500 font-medium">Low</span>
-          <div className="h-1.5 w-24 rounded-full" style={{ background: 'linear-gradient(to right, #3b82f6, #22c55e, #facc15, #ef4444)' }} />
-          <span className="text-[10px] text-gray-500 font-medium">High</span>
+          <span className="text-[10px] text-gray-500 font-medium">{legendLabelByMode[mode].low}</span>
+          <div className="h-1.5 w-24 rounded-full" style={{ background: legendLabelByMode[mode].gradient }} />
+          <span className="text-[10px] text-gray-500 font-medium">{legendLabelByMode[mode].high}</span>
         </div>
       </div>
     </div>

@@ -14,6 +14,7 @@ import {
 } from "@/lib/dashboardFilters";
 import { useActiveProjectIds } from "@/hooks/useActiveProjectIds";
 import { fetchSessionList, fetchSessionReplay, type SessionListItem } from "@/lib/sessionReplayApi";
+import { fetchProjects } from "@/lib/projectsApi";
 import { SessionList } from "@/components/session-replay/SessionList";
 import { SessionReplayViewer } from "@/components/session-replay/SessionReplayViewer";
 
@@ -30,6 +31,14 @@ export default function SessionReplayPage() {
 
   const normalizedProjectIds = normalizeProjectIds(activeProjectIds);
   const hasProjectSelection = normalizedProjectIds.length > 0;
+
+  const projectsQuery = useQuery({
+    queryKey: ["projects"],
+    queryFn: fetchProjects,
+  });
+
+  const selectedProjectId = normalizedProjectIds.split(",")[0] ?? "";
+  const selectedProject = (projectsQuery.data?.projects ?? []).find((project) => project.id === selectedProjectId) ?? null;
 
   const listQuery = useQuery({
     queryKey: ["session-replay", "list", normalizedProjectIds, searchQuery],
@@ -123,6 +132,7 @@ export default function SessionReplayPage() {
               events={replayQuery.data.events}
               durationMs={replayQuery.data.durationMs}
               page={replayQuery.data.page}
+              previewUrl={selectedProject?.website_url ?? null}
             />
           ) : (
             <div className="rounded-2xl border border-dashed border-gray-300 bg-white p-8 text-center text-sm text-gray-600">

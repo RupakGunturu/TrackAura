@@ -40,9 +40,24 @@ export interface RealtimeAnalyticsResponse {
   lastUpdated: string;
   from: string;
   to: string;
-  data: Array<{ t: number; v: number }>;
+  data: Array<{ t: number; label: string; v: number }>;
   regions: Array<{ name: string; users: number; pct: number }>;
   pages: Array<{ path: string; events: number }>;
+  stats: {
+    sessions: number;
+    avgDurationSec: number;
+    bounceRate: number;
+  };
+  newVsReturning: {
+    new: number;
+    returning: number;
+  };
+  deviceBreakdown: Array<{ name: "mobile" | "desktop" | "tablet"; value: number }>;
+  peakTraffic: {
+    time: string;
+    users: number;
+    deltaPct: number;
+  };
 }
 
 export interface FunnelsAnalyticsResponse {
