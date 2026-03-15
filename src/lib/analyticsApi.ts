@@ -75,6 +75,8 @@ export interface RetentionAnalyticsResponse {
   cohortColumns: string[];
   cohortData: Array<{
     cohort: string;
+    cohortLabel?: string;
+    cohortRange?: string;
     users: number;
     retention: Array<number | null>;
   }>;

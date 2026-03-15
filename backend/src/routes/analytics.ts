@@ -238,6 +238,7 @@ function makeFunnels(rows: EventRow[]) {
 }
 
 function makeRetention(rows: EventRow[], to: Date) {
+  const retentionCheckpoints = [0, 1, 3, 7, 14, 21, 30] as const;
   const sessionDays = new Map<string, Set<string>>();
 
   for (const row of rows) {
@@ -246,16 +247,40 @@ function makeRetention(rows: EventRow[], to: Date) {
     sessionDays.get(row.session_id)?.add(day);
   }
 
-  const cohorts = new Map<string, { users: number; day7: number; day14: number; day30: number; ageDays: number }>();
+  const cohorts = new Map<
+    string,
+    {
+      users: number;
+      ageDays: number;
+      firstDay: string;
+      rangeStartIso: string;
+      rangeEndIso: string;
+      retentionHits: Record<number, number>;
+    }
+  >();
 
   sessionDays.forEach((daysSet) => {
     const days = [...daysSet].sort();
     const first = new Date(`${days[0]}T00:00:00.000Z`);
-    const cohortLabel = `${days[0]}`;
+    const firstDay = days[0];
+    const cohortLabel = `${firstDay}`;
 
     if (!cohorts.has(cohortLabel)) {
       const ageDays = Math.floor((to.getTime() - first.getTime()) / (24 * 60 * 60 * 1000));
-      cohorts.set(cohortLabel, { users: 0, day7: 0, day14: 0, day30: 0, ageDays });
+      const rangeEnd = new Date(first);
+      rangeEnd.setUTCDate(rangeEnd.getUTCDate() + 6);
+
+      cohorts.set(cohortLabel, {
+        users: 0,
+        ageDays,
+        firstDay,
+        rangeStartIso: first.toISOString().slice(0, 10),
+        rangeEndIso: rangeEnd.toISOString().slice(0, 10),
+        retentionHits: retentionCheckpoints.reduce<Record<number, number>>((acc, checkpoint) => {
+          acc[checkpoint] = 0;
+          return acc;
+        }, {}),
+      });
     }
 
     const cohort = cohorts.get(cohortLabel)!;
@@ -263,26 +288,40 @@ function makeRetention(rows: EventRow[], to: Date) {
 
     const offsets = days.map((day) => Math.floor((new Date(`${day}T00:00:00.000Z`).getTime() - first.getTime()) / (24 * 60 * 60 * 1000)));
 
-    if (offsets.some((offset) => offset >= 7)) cohort.day7 += 1;
-    if (offsets.some((offset) => offset >= 14)) cohort.day14 += 1;
-    if (offsets.some((offset) => offset >= 30)) cohort.day30 += 1;
+    retentionCheckpoints.forEach((checkpoint) => {
+      if (checkpoint === 0) {
+        cohort.retentionHits[checkpoint] += 1;
+        return;
+      }
+
+      if (offsets.some((offset) => offset >= checkpoint)) {
+        cohort.retentionHits[checkpoint] += 1;
+      }
+    });
   });
 
   const sorted = [...cohorts.entries()].sort((a, b) => (a[0] < b[0] ? 1 : -1)).slice(0, 8);
 
+  const formatMonthDay = (isoDate: string) => {
+    const date = new Date(`${isoDate}T00:00:00.000Z`);
+    return date.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
+  };
+
   const cohortData = sorted.map(([cohort, value]) => ({
     cohort,
+    cohortLabel: `Week of ${formatMonthDay(value.firstDay)}`,
+    cohortRange: `${formatMonthDay(value.rangeStartIso)} - ${formatMonthDay(value.rangeEndIso)}`,
     users: value.users,
-    retention: [
-      100,
-      value.ageDays >= 7 ? Math.round((value.day7 / Math.max(1, value.users)) * 100) : null,
-      value.ageDays >= 14 ? Math.round((value.day14 / Math.max(1, value.users)) * 100) : null,
-      value.ageDays >= 30 ? Math.round((value.day30 / Math.max(1, value.users)) * 100) : null,
-    ],
+    retention: retentionCheckpoints.map((checkpoint) => {
+      if (checkpoint > value.ageDays) {
+        return null;
+      }
+      return Math.round((value.retentionHits[checkpoint] / Math.max(1, value.users)) * 100);
+    }),
   }));
 
   return {
-    cohortColumns: ["Day 1", "Day 7", "Day 14", "Day 30"],
+    cohortColumns: retentionCheckpoints.map((checkpoint) => `Day ${checkpoint}`),
     cohortData,
   };
 }
